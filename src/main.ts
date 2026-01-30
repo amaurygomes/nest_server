@@ -15,6 +15,9 @@ async function bootstrap() {
     }),
   );
 
+  app.setGlobalPrefix('api/v1');
+  app.enableCors();
+
   const config = new DocumentBuilder()
     .setTitle('Sistema de Gestão de Entregadores')
     .setDescription('Documentação da API de gestão e pagamentos')

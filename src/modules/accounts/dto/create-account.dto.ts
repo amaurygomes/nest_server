@@ -20,34 +20,34 @@ export class CreateAccountDto {
   authId?: string;
 
   @IsString()
-  @IsNotEmpty({ message: 'O Machine ID é obrigatório' })
+  @IsNotEmpty()
   machineId: string;
 
   @IsString()
-  @IsNotEmpty({ message: 'O CPF é obrigatório' })
+  @IsNotEmpty()
   cpf: string;
 
   @IsString()
-  @IsNotEmpty({ message: 'O nome é obrigatório' })
+  @IsNotEmpty()
   name: string;
 
   @IsString()
-  @IsNotEmpty({ message: 'O número da VTR é obrigatório' })
+  @IsNotEmpty()
   vtrNumber: string;
 
-  @IsEmail({}, { message: 'E-mail inválido' })
-  @IsNotEmpty({ message: 'E-mail obrigatório' })
+  @IsEmail()
+  @IsNotEmpty()
   email: string;
 
   @IsString()
   @IsOptional()
   chavePix?: string;
 
-  @IsEnum(UserStatus, { message: 'Status inválido. Use: A, I, E ou D' })
+  @IsEnum(UserStatus)
   @IsOptional()
   status?: UserStatus;
 
-  @IsEnum(UserRole, { message: 'Role inválida' })
+  @IsEnum(UserRole)
   @IsOptional()
   role?: UserRole;
 }

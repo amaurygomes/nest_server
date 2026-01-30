@@ -1,10 +1,19 @@
-import { Injectable, Inject, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
+import { 
+  Injectable, 
+  Inject, 
+  ConflictException, 
+  NotFoundException, 
+  BadRequestException,
+  InternalServerErrorException 
+} from '@nestjs/common';
 import { CreateAccountDto } from './dto/create-account.dto';
 import { UpdateAccountDto } from './dto/update-account.dto';
 import { DRIZZLE } from 'src/gateways/database/drizzle/drizzle.module';
-import { eq, isNull } from 'drizzle-orm';
+import { eq, isNull, and } from 'drizzle-orm';
 import type { DrizzleDb } from 'src/gateways/database/drizzle/drizzle.types';
 import * as schema from 'src/gateways/database/drizzle/schema';
+import { RequestIdDto } from './dto/request-id.dto';
+import { LinkAccountDto } from './dto/link-account.dto';
 
 @Injectable()
 export class AccountsService {
@@ -13,19 +22,16 @@ export class AccountsService {
     private readonly db: DrizzleDb
   ) { }
 
-  async create(createAccountDto: CreateAccountDto) {
+  async create(request: CreateAccountDto) {
     try {
       const [account] = await this.db
         .insert(schema.accounts)
-        .values(createAccountDto)
+        .values(request)
         .returning();
 
       return account;
     } catch (error: any) {
-      if (error.code === '23505') {
-        throw new ConflictException('Dados duplicados: CPF, E-mail ou MachineID já cadastrados.');
-      }
-      throw new BadRequestException('Erro ao criar conta. Verifique os dados enviados.');
+      throw new InternalServerErrorException('Error creating account');
     }
   }
 
@@ -36,42 +42,97 @@ export class AccountsService {
       .where(isNull(schema.accounts.deletedAt));
   }
 
-  async findOne(id: string) {
+  async findOne(request: RequestIdDto) {
     const [account] = await this.db
       .select()
       .from(schema.accounts)
-      .where(eq(schema.accounts.id, id));
+      .where(
+        and(
+          eq(schema.accounts.id, request.id),
+          isNull(schema.accounts.deletedAt)
+        )
+      );
 
-    if (!account) throw new NotFoundException('Conta não encontrada.');
+    if (!account) {
+      throw new NotFoundException('Account not found.');
+    }
+    
     return account;
   }
 
-  async update(id: string, updateAccountDto: UpdateAccountDto) {
-    const [updatedAccount] = await this.db
-      .update(schema.accounts)
-      .set({
-        ...updateAccountDto,
-        updatedAt: new Date(),
-      })
-      .where(eq(schema.accounts.id, id))
-      .returning();
+  async update(requestId: RequestIdDto, requestData: UpdateAccountDto) {
+    try {
+      const [updatedAccount] = await this.db
+        .update(schema.accounts)
+        .set({
+          ...requestData,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(schema.accounts.id, requestId.id),
+            isNull(schema.accounts.deletedAt)
+          )
+        )
+        .returning();
 
-    if (!updatedAccount) throw new NotFoundException('Conta não encontrada para atualizar.');
-    return updatedAccount;
+      if (!updatedAccount) {
+        throw new NotFoundException('Account not found for update.');
+      }
+
+      return updatedAccount;
+    } catch (error: any) {
+      if (error instanceof NotFoundException) throw error;
+      throw new InternalServerErrorException('Error updating account.');
+    }
   }
 
-  async remove(id: string) {
+  async linkUserAccount(request: LinkAccountDto) {
+
+
+    const [linkedAccount] = await this.db
+      .update(schema.accounts)
+      .set({
+        authId: request.authId,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(schema.accounts.cpf, request.cpf),
+          isNull(schema.accounts.deletedAt)
+        )
+      )
+      .returning();
+
+    if (!linkedAccount) {
+      throw new NotFoundException('Account not found for linking.');
+    }
+
+    return linkedAccount;
+  }
+
+  async remove(request: RequestIdDto) {
     const [deletedAccount] = await this.db
       .update(schema.accounts)
       .set({
         deletedAt: new Date(),
         status: 'E'
       })
-      .where(eq(schema.accounts.id, id))
+      .where(
+        and(
+          eq(schema.accounts.id, request.id),
+          isNull(schema.accounts.deletedAt)
+        )
+      )
       .returning();
 
-    if (!deletedAccount) throw new NotFoundException('Conta não encontrada para remover.');
-    
-    return { success: true, message: 'Conta excluída.' };
+    if (!deletedAccount) {
+      throw new NotFoundException('Account not found or already deleted.');
+    }
+
+    return { 
+      success: true, 
+      message: 'Account successfully deleted.' 
+    };
   }
 }

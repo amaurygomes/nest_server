@@ -2,14 +2,15 @@ import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/commo
 import { AccountsService } from './accounts.service';
 import { CreateAccountDto } from './dto/create-account.dto';
 import { UpdateAccountDto } from './dto/update-account.dto';
+import { RequestIdDto } from './dto/request-id.dto';
 
 @Controller('accounts')
 export class AccountsController {
   constructor(private readonly accountsService: AccountsService) {}
 
   @Post()
-  create(@Body() createAccountDto: CreateAccountDto) {
-    return this.accountsService.create(createAccountDto);
+  create(@Body() request: CreateAccountDto) {
+    return this.accountsService.create(request);
   }
 
   @Get()
@@ -18,17 +19,17 @@ export class AccountsController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.accountsService.findOne(id);
+  findOne(@Param('id') request: RequestIdDto) {
+    return this.accountsService.findOne(request);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateAccountDto: UpdateAccountDto) {
-    return this.accountsService.update(id, updateAccountDto);
+  update(@Param('id') requestId: RequestIdDto, @Body() requestData: UpdateAccountDto) {
+    return this.accountsService.update(requestId, requestData);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
+  remove(@Param('id') id: RequestIdDto) {
     return this.accountsService.remove(id);
   }
 }
