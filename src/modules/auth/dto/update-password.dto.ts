@@ -6,7 +6,4 @@ export class UpdatePasswordDto {
     @IsStrongPassword()
     password: string;
 
-    @IsString()
-    @IsNotEmpty()
-    token: string;
 }

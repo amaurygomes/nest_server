@@ -1,9 +1,7 @@
 import {
   Injectable,
   Inject,
-  ConflictException,
   NotFoundException,
-  BadRequestException,
   InternalServerErrorException
 } from '@nestjs/common';
 import { CreateAccountDto } from './dto/create-account.dto';
