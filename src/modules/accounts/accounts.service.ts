@@ -1,19 +1,20 @@
-import { 
-  Injectable, 
-  Inject, 
-  ConflictException, 
-  NotFoundException, 
+import {
+  Injectable,
+  Inject,
+  ConflictException,
+  NotFoundException,
   BadRequestException,
-  InternalServerErrorException 
+  InternalServerErrorException
 } from '@nestjs/common';
 import { CreateAccountDto } from './dto/create-account.dto';
 import { UpdateAccountDto } from './dto/update-account.dto';
-import { DRIZZLE } from 'src/gateways/database/drizzle/drizzle.module';
+import { DRIZZLE } from 'src/providers/database/drizzle/drizzle.module';
 import { eq, isNull, and } from 'drizzle-orm';
-import type { DrizzleDb } from 'src/gateways/database/drizzle/drizzle.types';
-import * as schema from 'src/gateways/database/drizzle/schema';
+import type { DrizzleDb } from 'src/providers/database/drizzle/drizzle.types';
+import * as schema from 'src/providers/database/drizzle/schema';
 import { RequestIdDto } from './dto/request-id.dto';
 import { LinkAccountDto } from './dto/link-account.dto';
+import { AccountDto } from './dto/account.dto';
 
 @Injectable()
 export class AccountsService {
@@ -35,6 +36,20 @@ export class AccountsService {
     }
   }
 
+  async bulkCreate(data: any[]) {
+    try {
+      await this.db
+        .insert(schema.accounts)
+        .values(data)
+        .onConflictDoNothing({ target: schema.accounts.machineId });
+
+      return { success: true };
+    } catch (error) {
+      console.error('Erro no processamento em lote:', error);
+      throw new InternalServerErrorException('Erro ao processar lote de contas');
+    }
+  }
+
   async findAll() {
     return await this.db
       .select()
@@ -42,13 +57,13 @@ export class AccountsService {
       .where(isNull(schema.accounts.deletedAt));
   }
 
-  async findOne(request: RequestIdDto) {
+  async findOne(request: RequestIdDto): Promise<AccountDto> {
     const [account] = await this.db
       .select()
       .from(schema.accounts)
       .where(
         and(
-          eq(schema.accounts.id, request.id),
+          eq(schema.accounts.machineId, request.id),
           isNull(schema.accounts.deletedAt)
         )
       );
@@ -56,8 +71,8 @@ export class AccountsService {
     if (!account) {
       throw new NotFoundException('Account not found.');
     }
-    
-    return account;
+
+    return account as AccountDto;
   }
 
   async update(requestId: RequestIdDto, requestData: UpdateAccountDto) {
@@ -130,9 +145,11 @@ export class AccountsService {
       throw new NotFoundException('Account not found or already deleted.');
     }
 
-    return { 
-      success: true, 
-      message: 'Account successfully deleted.' 
+    return {
+      success: true,
+      message: 'Account successfully deleted.'
     };
   }
+
+
 }

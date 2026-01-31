@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import  helmet from 'helmet';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -19,8 +20,8 @@ async function bootstrap() {
   app.enableCors();
 
   const config = new DocumentBuilder()
-    .setTitle('Sistema de Gestão de Entregadores')
-    .setDescription('Documentação da API de gestão e pagamentos')
+    .setTitle('Driver System API Documentation')
+    .setDescription('API documentation for Driver System management and payment processing')
     .setVersion('1.0')
     .addTag('accounts')          
     .addBearerAuth()             
@@ -28,6 +29,17 @@ async function bootstrap() {
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
+
+  app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: [`'self'`],
+      styleSrc: [`'self'`, `'unsafe-inline'`],
+      imgSrc: [`'self'`, 'data:', 'validator.swagger.io'],
+      scriptSrc: [`'self'`, `https: 'unsafe-inline'`],
+    },
+  },
+}));
 
   const port = process.env.PORT ?? 3000;
   await app.listen(port);

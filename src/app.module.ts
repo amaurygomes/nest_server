@@ -1,19 +1,26 @@
 import { Module } from '@nestjs/common';
-import { DrizzleModule } from './gateways/database/drizzle/drizzle.module';
+import { DrizzleModule } from './providers/database/drizzle/drizzle.module';
 import { ConfigModule } from '@nestjs/config';
 import { AccountsModule } from './modules/accounts/accounts.module';
-import { SupabaseModule } from './gateways/supabase/supabase.module';
+import { SupabaseModule } from './providers/supabase/supabase.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { MachineModule } from './providers/machine/machine.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { SchedulesModule } from './modules/schedules/schedules.module';
+
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    ScheduleModule.forRoot(),
     DrizzleModule,
     AccountsModule,
     SupabaseModule,
     AuthModule,
+    MachineModule,
+    SchedulesModule,
   ],
   controllers: [],
   providers: [],
