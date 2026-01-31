@@ -1,7 +1,7 @@
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsJWT, IsNotEmpty } from 'class-validator';
 
 export class SignOutDto {
-  @IsString()
+  @IsJWT()
   @IsNotEmpty()
   token: string;
 }

@@ -7,6 +7,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { MachineModule } from './providers/machine/machine.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { SchedulesModule } from './modules/schedules/schedules.module';
+import { PaymentsModule } from './modules/payments/payments.module';
 
 
 @Module({
@@ -21,6 +22,7 @@ import { SchedulesModule } from './modules/schedules/schedules.module';
     AuthModule,
     MachineModule,
     SchedulesModule,
+    PaymentsModule,
   ],
   controllers: [],
   providers: [],

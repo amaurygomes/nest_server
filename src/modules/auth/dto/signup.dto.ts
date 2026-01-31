@@ -1,12 +1,11 @@
-import { IsNotEmpty, IsString, MinLength } from 'class-validator';
+import { IsNotEmpty, IsString, IsStrongPassword, MinLength } from 'class-validator';
 
 export class SignUpDto {
   @IsString()
   @IsNotEmpty()
   cpf: string;
 
-  @IsString()
+  @IsStrongPassword()
   @IsNotEmpty()
-  @MinLength(8)
   password: string;
 }
