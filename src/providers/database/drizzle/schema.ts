@@ -118,3 +118,17 @@ export const paymentLogs = d.pgTable('payment_logs', {
     .defaultNow()
     .notNull(),
 });
+
+export const scheduleLogs = d.pgTable('schedule_logs', {
+  id: d.uuid('id').defaultRandom().primaryKey(),
+
+  action: d.text('action').notNull(),
+  status: d.text('status').notNull(),
+  message: d.text('message'),
+  details: d.jsonb('details'),
+
+  createdAt: d
+    .timestamp('created_at', { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
