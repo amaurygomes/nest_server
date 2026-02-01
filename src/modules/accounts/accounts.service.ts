@@ -2,7 +2,7 @@ import {
   Injectable,
   Inject,
   NotFoundException,
-  InternalServerErrorException
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { CreateAccountDto } from './dto/create-account.dto';
 import { UpdateAccountDto } from './dto/update-account.dto';
@@ -18,8 +18,8 @@ import { AccountDto } from './dto/account.dto';
 export class AccountsService {
   constructor(
     @Inject(DRIZZLE)
-    private readonly db: DrizzleDb
-  ) { }
+    private readonly db: DrizzleDb,
+  ) {}
 
   async create(createAccountDto: CreateAccountDto) {
     try {
@@ -44,7 +44,9 @@ export class AccountsService {
       return { success: true };
     } catch (error) {
       console.error('Erro no processamento em lote:', error);
-      throw new InternalServerErrorException('Erro ao processar lote de contas');
+      throw new InternalServerErrorException(
+        'Erro ao processar lote de contas',
+      );
     }
   }
 
@@ -62,8 +64,8 @@ export class AccountsService {
       .where(
         and(
           eq(schema.accounts.machineId, idRequestDto.id),
-          isNull(schema.accounts.deletedAt)
-        )
+          isNull(schema.accounts.deletedAt),
+        ),
       );
 
     if (!account) {
@@ -84,8 +86,8 @@ export class AccountsService {
         .where(
           and(
             eq(schema.accounts.id, idRequestDto.id),
-            isNull(schema.accounts.deletedAt)
-          )
+            isNull(schema.accounts.deletedAt),
+          ),
         )
         .returning();
 
@@ -101,8 +103,6 @@ export class AccountsService {
   }
 
   async linkUserAccount(linkAccountDto: LinkAccountDto) {
-
-
     const [linkedAccount] = await this.db
       .update(schema.accounts)
       .set({
@@ -112,8 +112,8 @@ export class AccountsService {
       .where(
         and(
           eq(schema.accounts.cpf, linkAccountDto.cpf),
-          isNull(schema.accounts.deletedAt)
-        )
+          isNull(schema.accounts.deletedAt),
+        ),
       )
       .returning();
 
@@ -129,13 +129,13 @@ export class AccountsService {
       .update(schema.accounts)
       .set({
         deletedAt: new Date(),
-        status: 'E'
+        status: 'E',
       })
       .where(
         and(
           eq(schema.accounts.id, idRequestDto.id),
-          isNull(schema.accounts.deletedAt)
-        )
+          isNull(schema.accounts.deletedAt),
+        ),
       )
       .returning();
 
@@ -145,9 +145,7 @@ export class AccountsService {
 
     return {
       success: true,
-      message: 'Account successfully deleted.'
+      message: 'Account successfully deleted.',
     };
   }
-
-
 }

@@ -4,14 +4,14 @@ import {
   IsString,
   IsUUID,
   IsOptional,
-  Min
+  Min,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreatePaymentDto {
   @ApiProperty({
     description: 'The unique identifier of the account owning this payment',
-    example: 'de2cf671-a1bb-435a-a94b-769067ff868e'
+    example: 'de2cf671-a1bb-435a-a94b-769067ff868e',
   })
   @IsUUID()
   @IsNotEmpty()
@@ -19,7 +19,7 @@ export class CreatePaymentDto {
 
   @ApiProperty({
     description: 'The total amount of the transaction',
-    example: 150.50
+    example: 150.5,
   })
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0.01)
@@ -28,7 +28,7 @@ export class CreatePaymentDto {
 
   @ApiProperty({
     description: 'External gateway transaction identifier',
-    example: 'TX_ORDER_998877'
+    example: 'TX_ORDER_998877',
   })
   @IsString()
   @IsNotEmpty()
@@ -36,7 +36,7 @@ export class CreatePaymentDto {
 
   @ApiPropertyOptional({
     description: 'Brief description of the payment purpose',
-    example: 'Premium Monthly Subscription'
+    example: 'Premium Monthly Subscription',
   })
   @IsString()
   @IsOptional()
@@ -44,7 +44,7 @@ export class CreatePaymentDto {
 
   @ApiPropertyOptional({
     description: 'PIX Copy and Paste string for manual payment',
-    example: '00020126580014BR.GOV.BCB.PIX0136...'
+    example: '00020126580014BR.GOV.BCB.PIX0136...',
   })
   @IsString()
   @IsOptional()
@@ -52,7 +52,7 @@ export class CreatePaymentDto {
 
   @ApiPropertyOptional({
     description: 'Base64 encoded string of the PIX QR Code image',
-    example: 'iVBORw0KGgoAAAANSUhEUgA...'
+    example: 'iVBORw0KGgoAAAANSUhEUgA...',
   })
   @IsString()
   @IsOptional()

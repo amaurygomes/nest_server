@@ -5,7 +5,6 @@ import { MachineModule } from 'src/providers/machine/machine.module';
 
 @Module({
   imports: [AccountsModule, MachineModule],
-  providers: [SchedulesService]
-
+  providers: [SchedulesService],
 })
 export class SchedulesModule {}

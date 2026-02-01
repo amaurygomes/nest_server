@@ -1,1 +1,0 @@
-ALTER TABLE "payments" ADD COLUMN "payment_method" "payment_method" NOT NULL;

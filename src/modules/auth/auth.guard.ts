@@ -19,12 +19,15 @@ export class AuthGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
-    
+
     const authHeader = request.headers.authorization;
     if (!authHeader) throw new UnauthorizedException('Token not provided');
     const token = authHeader.split(' ')[1];
 
-    const { data: { user: authUser }, error } = await this.supabase.auth.getUser(token);
+    const {
+      data: { user: authUser },
+      error,
+    } = await this.supabase.auth.getUser(token);
     if (error || !authUser) throw new UnauthorizedException('Invalid token');
 
     const [account] = await this.db
@@ -37,7 +40,6 @@ export class AuthGuard implements CanActivate {
         vtrNumber: accounts.vtrNumber,
         status: accounts.status,
         name: accounts.name,
-
       })
       .from(accounts)
       .where(eq(accounts.authId, authUser.id));

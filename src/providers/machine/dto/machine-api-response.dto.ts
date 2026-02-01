@@ -1,6 +1,6 @@
-import { ExternalAccountDto } from "./external-account.dto";
+import { ExternalAccountDto } from './external-account.dto';
 
 export class MachineApiResponse {
-    success: boolean;
-    response?: ExternalAccountDto[] | undefined;
+  success: boolean;
+  response?: ExternalAccountDto[] | undefined;
 }

@@ -1,3 +1,3 @@
 export class IdRequestDto {
-    id: string
+  id: string;
 }

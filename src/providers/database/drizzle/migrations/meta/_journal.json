@@ -5,43 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1769695416567,
-      "tag": "0000_classy_lightspeed",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1769884708726,
-      "tag": "0001_smooth_night_nurse",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1769884898265,
-      "tag": "0002_striped_bishop",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1769885427226,
-      "tag": "0003_dry_roxanne_simpson",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1769885630379,
-      "tag": "0004_lush_hellcat",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1769886302119,
-      "tag": "0005_solid_madelyne_pryor",
+      "when": 1769983958127,
+      "tag": "0000_zippy_newton_destine",
       "breakpoints": true
     }
   ]

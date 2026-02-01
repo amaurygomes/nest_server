@@ -10,27 +10,34 @@ export class MachineService {
   private readonly client: AxiosInstance;
 
   constructor() {
-    const auth = Buffer.from(`${process.env.MACHINE_AUTH_EMAIL}:${process.env.MACHINE_AUTH_PASSWORD}`).toString('base64');
+    const auth = Buffer.from(
+      `${process.env.MACHINE_AUTH_EMAIL}:${process.env.MACHINE_AUTH_PASSWORD}`,
+    ).toString('base64');
 
     this.client = axios.create({
       baseURL: process.env.MACHINE_BASE_URL,
       headers: {
-        'Authorization': `Basic ${auth}`,
+        Authorization: `Basic ${auth}`,
         'api-key': process.env.MACHINE_API_KEY!,
         'Content-Type': 'application/json',
       },
-      timeout: 60000, 
+      timeout: 60000,
     });
   }
-
 
   async listAllAccounts(): Promise<ExternalAccountDto[]> {
     const list: ExternalAccountDto[] = [];
     let page = 1;
 
     while (true) {
-      const data = await this.get<MachineApiResponse>(`/condutor?pagina=${page}&limite=100`);
-      if (data?.success && Array.isArray(data.response) && data.response.length > 0) {
+      const data = await this.get<MachineApiResponse>(
+        `/condutor?pagina=${page}&limite=100`,
+      );
+      if (
+        data?.success &&
+        Array.isArray(data.response) &&
+        data.response.length > 0
+      ) {
         list.push(...data.response);
         page++;
       } else {
@@ -41,13 +48,20 @@ export class MachineService {
     return list;
   }
 
-  async getAccountData(idRequestDto: IdRequestDto): Promise<ExternalAccountDto | null> {
-    const dados = await this.get<MachineApiResponse>(`/condutor/${idRequestDto.id}`);
+  async getAccountData(
+    idRequestDto: IdRequestDto,
+  ): Promise<ExternalAccountDto | null> {
+    const dados = await this.get<MachineApiResponse>(
+      `/condutor/${idRequestDto.id}`,
+    );
     const account = dados.success && dados.response?.[0];
     return account || null;
   }
 
-  async updateAccountData(idRequestDto: IdRequestDto, updateAccountDto: UpdateAccountDto): Promise<void> {
+  async updateAccountData(
+    idRequestDto: IdRequestDto,
+    updateAccountDto: UpdateAccountDto,
+  ): Promise<void> {
     await this.post(`/atualizarCondutor/${idRequestDto.id}`, {
       id: Number(idRequestDto.id),
       ...updateAccountDto,
@@ -60,9 +74,10 @@ export class MachineService {
 
     for (const account of accounts) {
       const cleanCpf = account.cpf ? account.cpf.replace(/\D/g, '') : null;
-      const vtr = account.numero_viatura && account.numero_viatura !== 'null'
-        ? String(account.numero_viatura).trim()
-        : null;
+      const vtr =
+        account.numero_viatura && account.numero_viatura !== 'null'
+          ? String(account.numero_viatura).trim()
+          : null;
 
       if (!cleanCpf || cleanCpf.length < 11) continue;
 
@@ -71,7 +86,9 @@ export class MachineService {
       }
     }
 
-    return Array.from(validMap.values()).filter(acc => acc.numero_viatura !== null);
+    return Array.from(validMap.values()).filter(
+      (acc) => acc.numero_viatura !== null,
+    );
   }
 
   private async get<T>(path: string): Promise<T> {
@@ -102,7 +119,7 @@ export class MachineService {
         error.response.status,
       );
     }
-    
+
     throw new HttpException(
       { message: 'Error connecting to Machine API', error: error.message },
       HttpStatus.INTERNAL_SERVER_ERROR,

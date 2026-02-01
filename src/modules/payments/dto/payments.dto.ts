@@ -1,30 +1,29 @@
-import type{ PaymentMethod, PaymentStatus } from "../types/payment.types";
+import type { PaymentMethod, PaymentStatus } from '../types/payment.types';
 
 export class PaymentDto {
-    id: string;
-    accountId: string;
-    amount: string;
-    status: PaymentStatus;
-    description?: string | null;
-    transactionId: string;
-    paymentDate?: Date | null;
+  id: string;
+  accountId: string;
+  amount: string;
+  status: PaymentStatus;
+  description?: string | null;
+  transactionId: string;
+  paymentDate?: Date | null;
 
-    pixCopyPaste?: string | null;
-    pixImageBase64?: string | null;
+  pixCopyPaste?: string | null;
+  pixImageBase64?: string | null;
 
-    paymentMethod: PaymentMethod | null;
+  paymentMethod: PaymentMethod | null;
 
-    approvedAt?: Date | null;
-    approvedBy?: string | null;
-    refundedBy?: string | null;
-    refundedAt?: Date | null;
-    refundReason?: string | null;
+  approvedAt?: Date | null;
+  approvedBy?: string | null;
+  refundedBy?: string | null;
+  refundedAt?: Date | null;
+  refundReason?: string | null;
 
-    statusSyncAt: boolean;
+  statusSyncAt: boolean;
 
-    createdAt: Date;
-    updatedAt: Date;
-
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export class PaymentListDto {

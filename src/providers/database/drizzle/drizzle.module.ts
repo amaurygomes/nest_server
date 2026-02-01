@@ -15,8 +15,8 @@ export const DRIZZLE = 'DRIZZLE';
       useFactory: (configService: ConfigService) => {
         const databaseUrl = configService.get<string>('DATABASE_URL');
 
-        if(!databaseUrl){
-          throw new Error("Banco de dados não configurado")
+        if (!databaseUrl) {
+          throw new Error('Banco de dados não configurado');
         }
 
         const queryClient = postgres(databaseUrl);

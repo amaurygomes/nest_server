@@ -1,12 +1,23 @@
-import { Controller, Get, Post, Body, Param, Query, UseGuards, Request, BadRequestException, ForbiddenException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+  Request,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PaymentsService } from './payments.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { IdParamDto } from './dto/id-param.dto';
 import { FindPaymentQueryDto } from './dto/find-payment-query.dto';
-import { ApprovePaymentDto } from './dto/approve-payment.dto';
 import { PaymentDto, PaymentListDto } from './dto/payments.dto';
 import { AuthGuard } from '../auth/auth.guard';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { FindOnePaymentDto } from './dto/find-one-payment-dto';
 
 @ApiTags('Payments')
 @UseGuards(AuthGuard)
@@ -18,17 +29,26 @@ export class PaymentsController {
   @Post()
   @ApiOperation({
     summary: 'Create a new payment',
-    description: 'Registers a new payment. Non-privileged users have their account ID automatically assigned from their session.'
+    description:
+      'Registers a new payment. Non-privileged users have their account ID automatically assigned from their session.',
   })
-  async create(@Request() req, @Body() createPaymentDto: CreatePaymentDto): Promise<PaymentDto> {
+  async create(
+    @Request() req,
+    @Body() createPaymentDto: CreatePaymentDto,
+  ): Promise<PaymentDto> {
     const { accountId } = req.user;
     const isPrivileged = ['OWNER', 'ADMIN', 'SUPPORT'].includes(req.user.role);
 
     if (isPrivileged && !createPaymentDto.accountId) {
-      throw new BadRequestException('AccountId not provided for privileged user');
+      throw new BadRequestException(
+        'AccountId not provided for privileged user',
+      );
     }
 
-    const data = { ...createPaymentDto, accountId: isPrivileged ? createPaymentDto.accountId : accountId };
+    const data = {
+      ...createPaymentDto,
+      accountId: isPrivileged ? createPaymentDto.accountId : accountId,
+    };
 
     return this.paymentsService.create(data);
   }
@@ -36,28 +56,39 @@ export class PaymentsController {
   @Get()
   @ApiOperation({
     summary: 'List all payments',
-    description: 'Retrieves a paginated list of payments. Regular users can only see their own payments, while admins can filter by any account.'
+    description:
+      'Retrieves a paginated list of payments. Regular users can only see their own payments, while admins can filter by any account.',
   })
-  async findAll(@Request() req, @Query() findPaymentQueryDto: FindPaymentQueryDto): Promise<PaymentListDto> {
-    const { accountId } = req.user;
-    const isPrivileged = ['OWNER', 'ADMIN', 'SUPPORT'].includes(req.user.role);
-
-    const data = { ...findPaymentQueryDto, accountId: isPrivileged ? findPaymentQueryDto.accountId : accountId };
-
-    return this.paymentsService.findAll(data);
-  }
-
-  @Get(':id')
-  @ApiOperation({
-    summary: 'Get payment details',
-    description: 'Returns the details of a specific payment ID if the user has permission to access it.'
-  })
-  async findOne(@Request() req, @Param() idParamDto: IdParamDto): Promise<PaymentDto> {
+  async findAll(
+    @Request() req,
+    @Query() findPaymentQueryDto: FindPaymentQueryDto,
+  ): Promise<PaymentListDto> {
     const { accountId } = req.user;
     const isPrivileged = ['OWNER', 'ADMIN', 'SUPPORT'].includes(req.user.role);
 
     const data = {
-      accountId: isPrivileged ? undefined : accountId
+      ...findPaymentQueryDto,
+      accountId: isPrivileged ? findPaymentQueryDto.accountId : accountId,
+    };
+
+    return this.paymentsService.findAll(data);
+  }
+
+  @Post(':id')
+  @ApiOperation({
+    summary: 'Get payment details',
+    description:
+      'Returns the details of a specific payment ID if the user has permission to access it.',
+  })
+  async findOne(
+    @Request() req, @Param() idParamDto: IdParamDto, @Body() findOnePaymentDto: FindOnePaymentDto =  {}): Promise<PaymentDto> {
+    const { accountId } = req.user;
+    const isPrivileged = ['OWNER', 'ADMIN', 'SUPPORT'].includes(req.user.role);
+
+    const data: FindOnePaymentDto = {
+      accountId: isPrivileged 
+        ? (findOnePaymentDto?.accountId || undefined) 
+        : accountId,
     };
 
     return this.paymentsService.findOne(idParamDto, data);
@@ -66,18 +97,23 @@ export class PaymentsController {
   @Post(':id/approve')
   @ApiOperation({
     summary: 'Approve payment',
-    description: 'Manual approval of a pending payment. Restricted to users with OWNER, ADMIN, or SUPPORT roles.'
+    description:
+      'Manual approval of a pending payment. Restricted to users with OWNER, ADMIN, or SUPPORT roles.',
   })
-  async approve(@Request() req, @Param() idParamDto: IdParamDto, @Body() approvePaymentDto: ApprovePaymentDto): Promise<PaymentDto> {
-
+  async approve(
+    @Request() req,
+    @Param() idParamDto: IdParamDto,
+  ): Promise<PaymentDto> {
     const isPrivileged = ['OWNER', 'ADMIN', 'SUPPORT'].includes(req.user.role);
 
     if (!isPrivileged) {
-      throw new ForbiddenException('User does not have permission to approve payments');
+      throw new ForbiddenException(
+        'User does not have permission to approve payments',
+      );
     }
 
-    const data = { ...approvePaymentDto, approvedBy: req.user.name };
+    const approvedBy = req.user.id;
 
-    return this.paymentsService.approve(idParamDto, data);
+    return this.paymentsService.approve(idParamDto, approvedBy);
   }
 }

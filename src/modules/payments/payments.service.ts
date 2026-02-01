@@ -1,4 +1,10 @@
-import { BadRequestException, Inject, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { UpdatePaymentDto } from './dto/update-payment.dto';
 import type { DrizzleDb } from 'src/providers/database/drizzle/drizzle.types';
@@ -7,24 +13,24 @@ import { and, count, desc, eq, notInArray, or, SQL } from 'drizzle-orm';
 import { IdParamDto } from './dto/id-param.dto';
 import { PaymentDto, PaymentListDto } from './dto/payments.dto';
 import { FindPaymentQueryDto } from './dto/find-payment-query.dto';
-import { ApprovePaymentDto } from './dto/approve-payment.dto';
 import { RefoundPaymentDto } from './dto/refound-payment.dto';
 import { FindOnePaymentDto } from './dto/find-one-payment-dto';
 
 @Injectable()
 export class PaymentsService {
-  constructor(
-    @Inject('DRIZZLE') private readonly db: DrizzleDb,
-  ) { }
+  constructor(@Inject('DRIZZLE') private readonly db: DrizzleDb) {}
 
   async create(createPaymentDto: CreatePaymentDto): Promise<PaymentDto> {
     const { amount, ...paymentData } = createPaymentDto;
 
-    const [payment] = await this.db.insert(payments).values({
-      ...paymentData,
-      accountId: createPaymentDto.accountId,
-      amount: amount.toString(),
-    }).returning();
+    const [payment] = await this.db
+      .insert(payments)
+      .values({
+        ...paymentData,
+        accountId: createPaymentDto.accountId,
+        amount: amount.toString(),
+      })
+      .returning();
 
     if (!payment) {
       throw new InternalServerErrorException('Error creating payment');
@@ -71,7 +77,10 @@ export class PaymentsService {
       .from(payments)
       .where(whereClause);
 
-    const [allPayments, totalResult] = await Promise.all([dataPromise, totalPromise]);
+    const [allPayments, totalResult] = await Promise.all([
+      dataPromise,
+      totalPromise,
+    ]);
 
     const total = Number(totalResult[0].value);
     const lastPage = Math.ceil(total / limit);
@@ -84,36 +93,43 @@ export class PaymentsService {
     };
   }
 
-  async findOne(idParamDto: IdParamDto, findOnePaymentDto: FindOnePaymentDto): Promise<PaymentDto> {
-  const { id } = idParamDto;
-  const { accountId } = findOnePaymentDto;
+  async findOne(
+    idParamDto: IdParamDto,
+    findOnePaymentDto: FindOnePaymentDto,
+  ): Promise<PaymentDto> {
+    const { id } = idParamDto;
+    const { accountId } = findOnePaymentDto;
 
-  if (!id) {
-    throw new BadRequestException('Payment ID is required');
+    if (!id) {
+      throw new BadRequestException('Payment ID is required');
+    }
+
+    const filters: SQL[] = [eq(payments.id, id)];
+
+    if (accountId) {
+      filters.push(eq(payments.accountId, accountId));
+    }
+
+    const [payment] = await this.db
+      .select()
+      .from(payments)
+      .where(and(...filters));
+
+    if (!payment) {
+      throw new NotFoundException('Payment not found');
+    }
+
+    return payment as PaymentDto;
   }
 
-  const filters: SQL[] = [eq(payments.id, id)];
-
-  if (accountId) {
-    filters.push(eq(payments.accountId, accountId));
-  }
-
-  const [payment] = await this.db
-    .select()
-    .from(payments)
-    .where(and(...filters));
-
-  if (!payment) {
-    throw new NotFoundException('Payment not found');
-  }
-
-  return payment as PaymentDto;
-}
-
-  async update(idParamDto: IdParamDto, updatePaymentDto: UpdatePaymentDto): Promise<PaymentDto> {
+  async update(
+    idParamDto: IdParamDto,
+    updatePaymentDto: UpdatePaymentDto,
+  ): Promise<PaymentDto> {
     const { id } = idParamDto;
 
-    const [updated] = await this.db.update(payments)
+    const [updated] = await this.db
+      .update(payments)
       .set({
         ...updatePaymentDto,
         paymentMethod: 'PIX',
@@ -126,8 +142,12 @@ export class PaymentsService {
     return updated;
   }
 
-  async refound(idParamDto: IdParamDto, refoundPaymentDto: RefoundPaymentDto): Promise<PaymentDto> {
-    const [refunded] = await this.db.update(payments)
+  async refound(
+    idParamDto: IdParamDto,
+    refoundPaymentDto: RefoundPaymentDto,
+  ): Promise<PaymentDto> {
+    const [refunded] = await this.db
+      .update(payments)
       .set({
         status: 'REFUNDED',
         refundedAt: new Date(),
@@ -136,30 +156,34 @@ export class PaymentsService {
         updatedAt: new Date(),
         statusSyncAt: true,
       })
-      .where(and(
-        eq(payments.id, idParamDto.id),
-        notInArray(payments.status, ['REFUNDED', 'FAILED', 'PENDING']),
-      ))
+      .where(
+        and(
+          eq(payments.id, idParamDto.id),
+          notInArray(payments.status, ['REFUNDED', 'FAILED', 'PENDING']),
+        ),
+      )
       .returning();
 
     return refunded;
   }
 
-  async approve(idParamDto: IdParamDto, approvePaymentDto: ApprovePaymentDto): Promise<PaymentDto> {
-
-    const [approved] = await this.db.update(payments)
+  async approve(
+    idParamDto: IdParamDto,
+    approvedBy: string,
+  ): Promise<PaymentDto> {
+    const [approved] = await this.db
+      .update(payments)
       .set({
         status: 'APPROVED',
         approvedAt: new Date(),
-        approvedBy: approvePaymentDto.approvedBy,
+        approvedBy: approvedBy,
         paymentMethod: 'APPROVED',
         updatedAt: new Date(),
         statusSyncAt: true,
       })
-      .where(and(
-        eq(payments.id, idParamDto.id),
-        eq(payments.status, 'PENDING'),
-      ))
+      .where(
+        and(eq(payments.id, idParamDto.id), eq(payments.status, 'PENDING')),
+      )
       .returning();
 
     if (!approved) {
@@ -168,5 +192,4 @@ export class PaymentsService {
 
     return approved;
   }
-
 }

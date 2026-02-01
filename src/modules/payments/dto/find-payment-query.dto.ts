@@ -1,4 +1,11 @@
-import { IsOptional, IsInt, Min, IsUUID, IsEnum, IsString } from 'class-validator';
+import {
+  IsOptional,
+  IsInt,
+  Min,
+  IsUUID,
+  IsEnum,
+  IsString,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import type { PaymentMethod, PaymentStatus } from '../types/payment.types';
@@ -7,7 +14,7 @@ export class FindPaymentQueryDto {
   @ApiPropertyOptional({
     description: 'Page number for pagination',
     example: 1,
-    default: 1
+    default: 1,
   })
   @IsOptional()
   @Type(() => Number)
@@ -18,7 +25,7 @@ export class FindPaymentQueryDto {
   @ApiPropertyOptional({
     description: 'Number of records per page',
     example: 20,
-    default: 20
+    default: 20,
   })
   @IsOptional()
   @Type(() => Number)
@@ -28,7 +35,7 @@ export class FindPaymentQueryDto {
 
   @ApiPropertyOptional({
     description: 'Filter by Account ID (UUID)',
-    example: 'de2cf671-a1bb-435a-a94b-769067ff868e'
+    example: 'de2cf671-a1bb-435a-a94b-769067ff868e',
   })
   @IsOptional()
   @IsUUID()
@@ -37,7 +44,7 @@ export class FindPaymentQueryDto {
   @ApiPropertyOptional({
     description: 'Filter by payment status',
     enum: ['PENDING', 'COMPLETED', 'FAILED', 'REFUNDED', 'APPROVED'],
-    example: 'PENDING'
+    example: 'PENDING',
   })
   @IsOptional()
   @IsEnum(['PENDING', 'COMPLETED', 'FAILED', 'REFUNDED', 'APPROVED'])
@@ -46,7 +53,7 @@ export class FindPaymentQueryDto {
   @ApiPropertyOptional({
     description: 'Filter by payment method',
     enum: ['PIX', 'APPROVED'],
-    example: 'PIX'
+    example: 'PIX',
   })
   @IsOptional()
   @IsEnum(['PIX', 'APPROVED'])
@@ -54,7 +61,7 @@ export class FindPaymentQueryDto {
 
   @ApiPropertyOptional({
     description: 'Filter by external transaction ID',
-    example: 'TX_123456789'
+    example: 'TX_123456789',
   })
   @IsOptional()
   @IsString()

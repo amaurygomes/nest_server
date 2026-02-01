@@ -9,7 +9,6 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { SchedulesModule } from './modules/schedules/schedules.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 
-
 @Module({
   imports: [
     ConfigModule.forRoot({

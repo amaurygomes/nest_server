@@ -1,10 +1,10 @@
-import { 
-  Inject, 
-  Injectable, 
-  NotFoundException, 
-  BadRequestException, 
+import {
+  Inject,
+  Injectable,
+  NotFoundException,
+  BadRequestException,
   UnauthorizedException,
-  InternalServerErrorException 
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { SignUpDto } from './dto/signup.dto';
 import { SignInDto } from './dto/signin.dto';
@@ -35,7 +35,7 @@ export class AuthService {
       password: signUpDto.password,
       email_confirm: true,
     });
-    
+
     if (error) {
       throw new BadRequestException(`Sign-up failed: ${error.message}`);
     }
@@ -44,21 +44,19 @@ export class AuthService {
       throw new InternalServerErrorException('User creation failed');
     }
 
-
-    try{
+    try {
       await this.accountsService.linkUserAccount({
         authId: data.user.id,
         cpf: signUpDto.cpf,
       });
-    }catch(err){
+    } catch (err) {
       await this.supabaseClient.auth.admin.deleteUser(data.user.id);
       throw new InternalServerErrorException('Failed to link user account');
-    } 
+    }
 
     return {
       message: 'User created and account linked successfully',
       authId: data.user.id,
-
     };
   }
 
@@ -93,8 +91,10 @@ export class AuthService {
   }
 
   async signOut(signOutDto: SignOutDto) {
-    const { error } = await this.supabaseClient.auth.admin.signOut(signOutDto.token);
-    
+    const { error } = await this.supabaseClient.auth.admin.signOut(
+      signOutDto.token,
+    );
+
     if (error) {
       throw new BadRequestException(`Sign-out failed: ${error.message}`);
     }
@@ -103,10 +103,14 @@ export class AuthService {
   }
 
   async passwordRequest(passwordRequestDto: PasswordRequestDto) {
-    const { error } = await this.supabaseClient.auth.resetPasswordForEmail(passwordRequestDto.email);
-    
+    const { error } = await this.supabaseClient.auth.resetPasswordForEmail(
+      passwordRequestDto.email,
+    );
+
     if (error) {
-      throw new InternalServerErrorException(`Reset password failed: ${error.message}`);
+      throw new InternalServerErrorException(
+        `Reset password failed: ${error.message}`,
+      );
     }
 
     return { message: 'If the email exists, a reset link has been sent' };
@@ -114,11 +118,13 @@ export class AuthService {
 
   async updatePassword(updatePasswordDto: UpdatePasswordDto) {
     const { error } = await this.supabaseClient.auth.updateUser({
-      password: updatePasswordDto.password
+      password: updatePasswordDto.password,
     });
 
     if (error) {
-      throw new InternalServerErrorException(`Update password failed: ${error.message}`);
+      throw new InternalServerErrorException(
+        `Update password failed: ${error.message}`,
+      );
     }
 
     return { message: 'Password updated successfully' };
@@ -135,7 +141,7 @@ export class AuthService {
     if (!accountEmail) {
       throw new NotFoundException('Account with provided CPF not found.');
     }
-    
+
     return accountEmail;
   }
 }

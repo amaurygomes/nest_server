@@ -1,4 +1,4 @@
 export class RefoundPaymentDto {
-    refundedBy: string;
-    refundReason: string;
+  refundedBy: string;
+  refundReason: string;
 }

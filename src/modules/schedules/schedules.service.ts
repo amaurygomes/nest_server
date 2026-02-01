@@ -5,41 +5,35 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 
 @Injectable()
 export class SchedulesService {
-    constructor(
-        private readonly accountsService: AccountsService,
-        private readonly machineService: MachineService,
-    ) { }
+  constructor(
+    private readonly accountsService: AccountsService,
+    private readonly machineService: MachineService,
+  ) {}
 
-    @Cron(CronExpression.EVERY_5_MINUTES)
-    async handleSyncAccounts() {
-        const accountsToSync = await this.machineService.mapAccounts();
-        if (!accountsToSync.length) return;
+  @Cron(CronExpression.EVERY_5_MINUTES)
+  async handleSyncAccounts() {
+    const accountsToSync = await this.machineService.mapAccounts();
+    if (!accountsToSync.length) return;
 
-        console.log(`Starting sync. ${accountsToSync.length} accounts to process.`);
+    const formattedData = accountsToSync.map((acc) => ({
+      machineId: acc.id,
+      cpf: acc.cpf,
+      name: acc.nome,
+      vtrNumber: acc.numero_viatura || '',
+      email: acc.email || '',
+      status: 'A',
+      role: 'USER',
+    }));
 
-        const formattedData = accountsToSync.map(acc => ({
-            machineId: acc.id,
-            cpf: acc.cpf,
-            name: acc.nome,
-            vtrNumber: acc.numero_viatura || '',
-            email: acc.email || '',
-            status: 'A',
-            role: 'USER',
-        }));
+    const chunkSize = 500;
+    for (let i = 0; i < formattedData.length; i += chunkSize) {
+      const chunk = formattedData.slice(i, i + chunkSize);
 
-        const chunkSize = 500;
-        for (let i = 0; i < formattedData.length; i += chunkSize) {
-            const chunk = formattedData.slice(i, i + chunkSize);
-
-            try {
-                await this.accountsService.bulkCreate(chunk);
-                console.log(`Processed chunk: ${i} to ${Math.min(i + chunkSize, formattedData.length)}`);
-            } catch (error) {
-                console.error('Failed to process specific batch:', error);
-            }
-        }
-
-        console.log('Sync completed.');
+      try {
+        await this.accountsService.bulkCreate(chunk);
+      } catch (error) {
+        console.error('Failed to process specific batch:', error);
+      }
     }
-
+  }
 }

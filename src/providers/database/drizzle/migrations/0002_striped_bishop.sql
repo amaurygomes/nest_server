@@ -1,1 +1,0 @@
-ALTER TABLE "payments" ADD COLUMN "status_sync_at" boolean DEFAULT false NOT NULL;
