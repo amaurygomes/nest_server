@@ -47,7 +47,7 @@ export const payments = d.pgTable('payments', {
   pixCopyPaste: d.text('pix_copy_paste'),
   pixImageBase64: d.text('pix_image_base64'),
 
-  paymentMethodEnum: paymentMethodEnum('payment_method'),
+  paymentMethod: paymentMethodEnum('payment_method'),
 
   approvedAt: d.timestamp('approved_at', { withTimezone: true }),
   approvedBy: d.uuid('approved_by').references(() => accounts.id),

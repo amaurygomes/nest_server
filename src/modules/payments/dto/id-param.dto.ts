@@ -1,6 +1,6 @@
 import { IsNotEmpty, IsUUID } from "class-validator";
 
-export class IdRequestDto {
+export class IdParamDto {
     @IsUUID()
     @IsNotEmpty()
     id: string;

@@ -10,7 +10,7 @@ import { DRIZZLE } from 'src/providers/database/drizzle/drizzle.module';
 import { eq, isNull, and } from 'drizzle-orm';
 import type { DrizzleDb } from 'src/providers/database/drizzle/drizzle.types';
 import * as schema from 'src/providers/database/drizzle/schema';
-import { RequestIdDto } from './dto/request-id.dto';
+import { IdRequestDto } from './dto/id-request.dto';
 import { LinkAccountDto } from './dto/link-account.dto';
 import { AccountDto } from './dto/account.dto';
 
@@ -21,11 +21,11 @@ export class AccountsService {
     private readonly db: DrizzleDb
   ) { }
 
-  async create(request: CreateAccountDto) {
+  async create(createAccountDto: CreateAccountDto) {
     try {
       const [account] = await this.db
         .insert(schema.accounts)
-        .values(request)
+        .values(createAccountDto)
         .returning();
 
       return account;
@@ -55,13 +55,13 @@ export class AccountsService {
       .where(isNull(schema.accounts.deletedAt));
   }
 
-  async findOne(request: RequestIdDto): Promise<AccountDto> {
+  async findOne(idRequestDto: IdRequestDto): Promise<AccountDto> {
     const [account] = await this.db
       .select()
       .from(schema.accounts)
       .where(
         and(
-          eq(schema.accounts.machineId, request.id),
+          eq(schema.accounts.machineId, idRequestDto.id),
           isNull(schema.accounts.deletedAt)
         )
       );
@@ -73,17 +73,17 @@ export class AccountsService {
     return account as AccountDto;
   }
 
-  async update(requestId: RequestIdDto, requestData: UpdateAccountDto) {
+  async update(idRequestDto: IdRequestDto, updateAccountDto: UpdateAccountDto) {
     try {
       const [updatedAccount] = await this.db
         .update(schema.accounts)
         .set({
-          ...requestData,
+          ...updateAccountDto,
           updatedAt: new Date(),
         })
         .where(
           and(
-            eq(schema.accounts.id, requestId.id),
+            eq(schema.accounts.id, idRequestDto.id),
             isNull(schema.accounts.deletedAt)
           )
         )
@@ -100,18 +100,18 @@ export class AccountsService {
     }
   }
 
-  async linkUserAccount(request: LinkAccountDto) {
+  async linkUserAccount(linkAccountDto: LinkAccountDto) {
 
 
     const [linkedAccount] = await this.db
       .update(schema.accounts)
       .set({
-        authId: request.authId,
+        authId: linkAccountDto.authId,
         updatedAt: new Date(),
       })
       .where(
         and(
-          eq(schema.accounts.cpf, request.cpf),
+          eq(schema.accounts.cpf, linkAccountDto.cpf),
           isNull(schema.accounts.deletedAt)
         )
       )
@@ -124,7 +124,7 @@ export class AccountsService {
     return linkedAccount;
   }
 
-  async remove(request: RequestIdDto) {
+  async remove(idRequestDto: IdRequestDto) {
     const [deletedAccount] = await this.db
       .update(schema.accounts)
       .set({
@@ -133,7 +133,7 @@ export class AccountsService {
       })
       .where(
         and(
-          eq(schema.accounts.id, request.id),
+          eq(schema.accounts.id, idRequestDto.id),
           isNull(schema.accounts.deletedAt)
         )
       )

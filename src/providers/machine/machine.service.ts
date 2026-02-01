@@ -41,16 +41,16 @@ export class MachineService {
     return list;
   }
 
-  async getAccountData(request: IdRequestDto): Promise<ExternalAccountDto | null> {
-    const dados = await this.get<MachineApiResponse>(`/condutor/${request.id}`);
+  async getAccountData(idRequestDto: IdRequestDto): Promise<ExternalAccountDto | null> {
+    const dados = await this.get<MachineApiResponse>(`/condutor/${idRequestDto.id}`);
     const account = dados.success && dados.response?.[0];
     return account || null;
   }
 
-  async updateAccountData(request: IdRequestDto, data: UpdateAccountDto): Promise<void> {
-    await this.post(`/atualizarCondutor/${request.id}`, {
-      id: Number(request.id),
-      ...data,
+  async updateAccountData(idRequestDto: IdRequestDto, updateAccountDto: UpdateAccountDto): Promise<void> {
+    await this.post(`/atualizarCondutor/${idRequestDto.id}`, {
+      id: Number(idRequestDto.id),
+      ...updateAccountDto,
     });
   }
 

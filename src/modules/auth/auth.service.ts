@@ -27,12 +27,12 @@ export class AuthService {
     private readonly accountsService: AccountsService,
   ) {}
 
-  async signUp(request: SignUpDto) {
-    const accountEmail = await this.getAccountEmail(request.cpf);
+  async signUp(signUpDto: SignUpDto) {
+    const accountEmail = await this.getAccountEmail(signUpDto.cpf);
 
     const { data, error } = await this.supabaseClient.auth.admin.createUser({
       email: accountEmail,
-      password: request.password,
+      password: signUpDto.password,
       email_confirm: true,
     });
     
@@ -48,7 +48,7 @@ export class AuthService {
     try{
       await this.accountsService.linkUserAccount({
         authId: data.user.id,
-        cpf: request.cpf,
+        cpf: signUpDto.cpf,
       });
     }catch(err){
       await this.supabaseClient.auth.admin.deleteUser(data.user.id);
@@ -62,8 +62,8 @@ export class AuthService {
     };
   }
 
-  async signIn(request: SignInDto) {
-    const accountEmail = await this.getAccountEmail(request.cpf);
+  async signIn(signInDto: SignInDto) {
+    const accountEmail = await this.getAccountEmail(signInDto.cpf);
 
     if (!accountEmail) {
       throw new NotFoundException('Account with provided CPF not found.');
@@ -71,7 +71,7 @@ export class AuthService {
 
     const { data, error } = await this.supabaseClient.auth.signInWithPassword({
       email: accountEmail,
-      password: request.password,
+      password: signInDto.password,
     });
 
     if (error) {
@@ -92,8 +92,8 @@ export class AuthService {
     };
   }
 
-  async signOut(request: SignOutDto) {
-    const { error } = await this.supabaseClient.auth.admin.signOut(request.token);
+  async signOut(signOutDto: SignOutDto) {
+    const { error } = await this.supabaseClient.auth.admin.signOut(signOutDto.token);
     
     if (error) {
       throw new BadRequestException(`Sign-out failed: ${error.message}`);
@@ -102,8 +102,8 @@ export class AuthService {
     return { message: 'Signed out successfully' };
   }
 
-  async passwordRequest(request: PasswordRequestDto) {
-    const { error } = await this.supabaseClient.auth.resetPasswordForEmail(request.email);
+  async passwordRequest(passwordRequestDto: PasswordRequestDto) {
+    const { error } = await this.supabaseClient.auth.resetPasswordForEmail(passwordRequestDto.email);
     
     if (error) {
       throw new InternalServerErrorException(`Reset password failed: ${error.message}`);
@@ -112,9 +112,9 @@ export class AuthService {
     return { message: 'If the email exists, a reset link has been sent' };
   }
 
-  async updatePassword(request: UpdatePasswordDto) {
+  async updatePassword(updatePasswordDto: UpdatePasswordDto) {
     const { error } = await this.supabaseClient.auth.updateUser({
-      password: request.password
+      password: updatePasswordDto.password
     });
 
     if (error) {
