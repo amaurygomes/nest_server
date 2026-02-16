@@ -43,9 +43,9 @@ export class AccountsService {
 
       return { success: true };
     } catch (error) {
-      console.error('Erro no processamento em lote:', error);
+      console.error('Error in bulk processing:', error);
       throw new InternalServerErrorException(
-        'Erro ao processar lote de contas',
+        'Error processing account batch',
       );
     }
   }

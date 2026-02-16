@@ -55,45 +55,45 @@ export class EfiGatewayService implements IPaymentGateway {
       
       const qrCodeResponse = await this.efi.pixGenerateQRCode({ id: chargeResponse.loc.id });
 
-      this.logger.log('EfiGateway: Cobrança Pix criada com sucesso.');
+      this.logger.log('EfiGateway: Pix charge created successfully.');
 
       return {
         transactionId: chargeResponse.txid,
         status: chargeResponse.status,
         qrCode: qrCodeResponse.qrcode,
-        paymentLink: qrCodeResponse.imagemQrcode,
+        qrCodeImageBase64: qrCodeResponse.imagemQrcode,
       };
     } catch (error) {
-      this.logger.error('EfiGateway: Erro ao criar cobrança Pix:', error?.response?.data || error.message);
+      this.logger.error('EfiGateway: Error creating Pix charge:', error?.response?.data || error.message);
       throw error;
     }
   }
 
   async refund(data: RefundDto): Promise<RefundResponse> {
     const { transactionId, value } = data;
-    this.logger.debug(`EfiGateway: Efetuando devolução para txid ${transactionId} com valor ${value}`);
+    this.logger.debug(`EfiGateway: Refunding transaction txid ${transactionId} with value ${value}`);
     try {
       
       const params = {
-        e2eId: 'E2E_ID_DA_TRANSACAO_ORIGINAL',
+        e2eId: 'E2E_ID_FROM_ORIGINAL_TRANSACTION',
         id: transactionId,
       };
 
-      const body: { valor?: string } = {}; // Inicializa como objeto vazio
+      const body: { valor?: string } = {}; 
       if (value !== undefined) {
         body.valor = (value / 100).toFixed(2);
       }
 
       const refundResponse = await this.efi.pixDevolution(params, body);
 
-      this.logger.log(`EfiGateway: Devolução iniciada para a transação ${transactionId}.`);
+      this.logger.log(`EfiGateway: Refund initiated for transaction ${transactionId}.`);
       
       return {
         refundId: refundResponse.rtrId,
         status: refundResponse.status,
       };
     } catch (error) {
-      this.logger.error(`EfiGateway: Erro na devolução da transação ${transactionId}:`, error?.response?.data || error.message);
+      this.logger.error(`EfiGateway: Error refunding transaction ${transactionId}:`, error?.response?.data || error.message);
       throw error;
     }
   }

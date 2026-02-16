@@ -12,8 +12,9 @@ export interface CreateChargeDto {
 export interface CreateChargeResponse {
   transactionId: string;
   status: string;
+  paymentLink?: string; 
   qrCode?: string;
-  paymentLink?: string;
+  qrCodeImageBase64?: string;
 }
 
 export interface RefundDto {
