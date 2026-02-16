@@ -10,7 +10,7 @@ export class SchedulesService {
     private readonly machineService: MachineService,
   ) {}
 
-  @Cron(CronExpression.EVERY_5_MINUTES)
+  @Cron(CronExpression.EVERY_10_MINUTES)
   async handleSyncAccounts() {
     const accountsToSync = await this.machineService.mapAccounts();
     if (!accountsToSync.length) return;

@@ -8,6 +8,7 @@ import { MachineModule } from './providers/machine/machine.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { SchedulesModule } from './modules/schedules/schedules.module';
 import { PaymentsModule } from './modules/payments/payments.module';
+import { PaymentGatewayModule } from './providers/payment-gateways/payment-gateway.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { PaymentsModule } from './modules/payments/payments.module';
     MachineModule,
     SchedulesModule,
     PaymentsModule,
+    PaymentGatewayModule.register(),
   ],
   controllers: [],
   providers: [],
