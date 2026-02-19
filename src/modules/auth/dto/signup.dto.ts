@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, IsStrongPassword } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsOptional, IsString, IsStrongPassword } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class SignUpDto {
@@ -21,4 +21,14 @@ export class SignUpDto {
   @IsStrongPassword()
   @IsNotEmpty()
   password: string;
+
+  @ApiProperty({
+    description: 'Vehicle Type (CAR, MOTORCYCLE, BICYCLE)',
+    example: 'MOTORCYCLE',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  // @IsEnum(['CAR', 'MOTORCYCLE', 'BICYCLE']) // Avoiding circular dependency for now, validation happens in logic or we import enum
+  vehicleType?: string;
 }

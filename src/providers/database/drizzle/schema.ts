@@ -6,7 +6,7 @@ export const roleEnum = d.pgEnum('user_role', [
   'USER',
   'SUPPORT',
 ]);
-export const statusEnum = d.pgEnum('status', ['A', 'I', 'E']);
+export const statusEnum = d.pgEnum('status', ['A', 'I', 'E', 'S', 'R', 'F']);
 export const paymentStatusEnum = d.pgEnum('payment_status', [
   'PENDING',
   'COMPLETED',
@@ -17,6 +17,12 @@ export const paymentStatusEnum = d.pgEnum('payment_status', [
 export const paymentMethodEnum = d.pgEnum('payment_method', [
   'PIX',
   'APPROVED',
+]);
+
+export const vehicleTypeEnum = d.pgEnum('vehicle_type', [
+  'CAR',
+  'MOTORCYCLE',
+  'BICYCLE',
 ]);
 
 export const accounts = d.pgTable('accounts', {
@@ -33,6 +39,8 @@ export const accounts = d.pgTable('accounts', {
 
   status: statusEnum('status').default('A').notNull(),
   role: roleEnum('role').default('USER').notNull(),
+  isPartner: d.boolean('is_partner').default(false).notNull(),
+  vehicleType: vehicleTypeEnum('vehicle_type'),
 
   createdAt: d
     .timestamp('created_at', { withTimezone: true })
@@ -53,6 +61,8 @@ export const payments = d.pgTable('payments', {
     .uuid('account_id')
     .notNull()
     .references(() => accounts.id),
+
+  subscriptionId: d.uuid('subscription_id').references(() => subscriptions.id),
 
   amount: d.decimal('amount', { precision: 10, scale: 2 }).notNull(),
   status: paymentStatusEnum('status').default('PENDING').notNull(),
@@ -131,4 +141,77 @@ export const scheduleLogs = d.pgTable('schedule_logs', {
     .timestamp('created_at', { withTimezone: true })
     .defaultNow()
     .notNull(),
+});
+
+export const planIntervalEnum = d.pgEnum('plan_interval', [
+  'WEEKLY',
+  'MONTHLY',
+  'YEARLY',
+  'DAILY',
+]);
+
+export const subscriptionStatusEnum = d.pgEnum('subscription_status', [
+  'ACTIVE',
+  'CANCELLED',
+  'PAST_DUE',
+  'PENDING',
+]);
+
+export const plans = d.pgTable('plans', {
+  id: d.uuid('id').defaultRandom().primaryKey(),
+
+  name: d.text('name').notNull(),
+  description: d.text('description'),
+  price: d.decimal('price', { precision: 10, scale: 2 }).notNull(),
+  interval: planIntervalEnum('interval').notNull(),
+  dailyLateFee: d.decimal('daily_late_fee', { precision: 10, scale: 2 }),
+  lateFeeAfter30Days: d.decimal('late_fee_after_30_days', {
+    precision: 10,
+    scale: 2,
+  }),
+  customPrices: d.jsonb('custom_prices'),
+  tax: d.decimal('tax', { precision: 10, scale: 2 }).default('0').notNull(),
+  targetVehicleTypes: d.jsonb('target_vehicle_types'),
+
+  createdAt: d
+    .timestamp('created_at', { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: d
+    .timestamp('updated_at', { withTimezone: true })
+    .defaultNow()
+    .notNull()
+    .$onUpdateFn(() => new Date()),
+  deletedAt: d.timestamp('deleted_at', { withTimezone: true }),
+});
+
+export const subscriptions = d.pgTable('subscriptions', {
+  id: d.uuid('id').defaultRandom().primaryKey(),
+
+  accountId: d
+    .uuid('account_id')
+    .notNull()
+    .references(() => accounts.id),
+  planId: d
+    .uuid('plan_id')
+    .notNull()
+    .references(() => plans.id),
+
+  status: subscriptionStatusEnum('status').default('PENDING').notNull(),
+  startDate: d.timestamp('start_date', { withTimezone: true }).notNull(),
+  nextBillingDate: d
+    .timestamp('next_billing_date', { withTimezone: true })
+    .notNull(),
+  dueDay: d.integer('due_day'),
+
+  createdAt: d
+    .timestamp('created_at', { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: d
+    .timestamp('updated_at', { withTimezone: true })
+    .defaultNow()
+    .notNull()
+    .$onUpdateFn(() => new Date()),
+  deletedAt: d.timestamp('deleted_at', { withTimezone: true }),
 });

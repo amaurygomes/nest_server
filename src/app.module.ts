@@ -10,6 +10,7 @@ import { SchedulesModule } from './modules/schedules/schedules.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { PaymentGatewayModule } from './providers/payment-gateways/payment-gateway.module';
 import { QueueModule } from './providers/queue/queue.module';
+import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
 
 @Module({
   imports: [
@@ -26,8 +27,9 @@ import { QueueModule } from './providers/queue/queue.module';
     SchedulesModule,
     PaymentsModule,
     PaymentGatewayModule.register(),
+    SubscriptionsModule,
   ],
   controllers: [],
   providers: [],
 })
-export class AppModule {}
+export class AppModule { }

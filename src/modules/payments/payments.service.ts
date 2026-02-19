@@ -8,10 +8,12 @@ import {
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { UpdatePaymentDto } from './dto/update-payment.dto';
 import type { DrizzleDb } from 'src/providers/database/drizzle/drizzle.types';
-import { accounts, payments } from 'src/providers/database/drizzle/schema';
+import { accounts, payments, subscriptions, plans } from 'src/providers/database/drizzle/schema';
 import { and, count, desc, eq, notInArray, SQL } from 'drizzle-orm';
 import { IdParamDto } from './dto/id-param.dto';
 import { PaymentDto, PaymentListDto } from './dto/payments.dto';
+import { addDays, addMonths, addYears, subDays, subMonths, subYears, format } from 'date-fns';
+import { MachineService } from 'src/providers/machine/machine.service';
 import { FindPaymentQueryDto } from './dto/find-payment-query.dto';
 import { RefoundPaymentDto } from './dto/refound-payment.dto';
 import { FindOnePaymentDto } from './dto/find-one-payment-dto';
@@ -26,7 +28,8 @@ export class PaymentsService {
     @Inject('DRIZZLE') private readonly db: DrizzleDb,
     @Inject(PAYMENT_GATEWAY_TOKEN)
     private readonly paymentGateway: IPaymentGateway,
-  ) {}
+    private readonly machineService: MachineService,
+  ) { }
 
   async create(createPaymentDto: CreatePaymentDto): Promise<PaymentDto> {
     const { accountId, amount, description } = createPaymentDto;
@@ -208,6 +211,66 @@ export class PaymentsService {
         ),
       )
       .returning();
+
+    if (refunded && refunded.subscriptionId) {
+      // Revert Subscription
+      const [subscription] = await this.db
+        .select()
+        .from(subscriptions)
+        .where(eq(subscriptions.id, refunded.subscriptionId));
+
+      if (subscription) {
+        const [plan] = await this.db
+          .select()
+          .from(plans)
+          .where(eq(plans.id, subscription.planId));
+
+        if (plan) {
+          // Calculate new expiry (Subtract time)
+          let newExpiry = new Date(subscription.nextBillingDate);
+
+          switch (plan.interval) {
+            case 'WEEKLY':
+              newExpiry = subDays(newExpiry, 7);
+              break;
+            case 'MONTHLY':
+              newExpiry = subMonths(newExpiry, 1);
+              break;
+            case 'YEARLY':
+              newExpiry = subYears(newExpiry, 1);
+              break;
+            case 'DAILY':
+              newExpiry = subDays(newExpiry, 1);
+              break;
+          }
+          const now = new Date();
+          const isPastDue = newExpiry < now;
+          const newStatus = isPastDue ? 'PAST_DUE' : 'ACTIVE';
+
+          await this.db.update(subscriptions).set({
+            nextBillingDate: newExpiry,
+            status: newStatus,
+            updatedAt: new Date(),
+          }).where(eq(subscriptions.id, subscription.id));
+
+          // Update Machine with New Date and Status
+          const [account] = await this.db
+            .select({ machineId: accounts.machineId })
+            .from(accounts)
+            .where(eq(accounts.id, subscription.accountId));
+
+          if (account && account.machineId) {
+            await this.machineService.updateAccountData(
+              { id: account.machineId },
+              {
+                status_condutor: isPastDue ? 'I' : 'A', // Block if expired, Keep Active if validated
+                observacao_interna_3: format(newExpiry, 'dd/MM/yyyy HH:mm:ss') // Always update the date
+              }
+            );
+          }
+        }
+      }
+    }
 
     return refunded;
   }

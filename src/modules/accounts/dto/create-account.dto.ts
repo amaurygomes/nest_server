@@ -16,9 +16,12 @@ export enum UserRole {
 }
 
 export enum UserStatus {
-  A = 'A',
-  I = 'I',
-  E = 'E',
+  A = 'A', // Ativo
+  I = 'I', // Inativo
+  E = 'E', // Em Análise
+  S = 'S', // Suspenso
+  R = 'R', // Rejeitado
+  F = 'F', // Fila de Espera
 }
 
 export class CreateAccountDto {

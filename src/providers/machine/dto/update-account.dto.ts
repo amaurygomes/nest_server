@@ -3,4 +3,7 @@ export class UpdateAccountDto {
   observacao_interna_1?: string;
   observacao_interna_2?: string;
   observacao_interna_3?: string;
+  nome?: string;
+  email?: string;
+  numero_viatura?: string;
 }

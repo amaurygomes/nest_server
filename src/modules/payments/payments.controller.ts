@@ -18,13 +18,14 @@ import { PaymentDto, PaymentListDto } from './dto/payments.dto';
 import { AuthGuard } from '../auth/auth.guard';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { FindOnePaymentDto } from './dto/find-one-payment-dto';
+import { RefoundPaymentDto } from './dto/refound-payment.dto';
 
 @ApiTags('Payments')
 @UseGuards(AuthGuard)
 @ApiBearerAuth()
 @Controller('payments')
 export class PaymentsController {
-  constructor(private readonly paymentsService: PaymentsService) {}
+  constructor(private readonly paymentsService: PaymentsService) { }
 
   @Post()
   @ApiOperation({
@@ -118,5 +119,29 @@ export class PaymentsController {
     const approvedBy = req.user.id;
 
     return this.paymentsService.approve(idParamDto, approvedBy);
+  }
+
+  @Post(':id/refund')
+  @ApiOperation({
+    summary: 'Refund payment',
+    description:
+      'Refund a payment. Restricted to users with OWNER, ADMIN, or SUPPORT roles.',
+  })
+  async refund(
+    @Request() req,
+    @Param() idParamDto: IdParamDto,
+    @Body() refoundPaymentDto: RefoundPaymentDto,
+  ): Promise<PaymentDto> {
+    const isPrivileged = ['OWNER', 'ADMIN', 'SUPPORT'].includes(req.user.role);
+
+    if (!isPrivileged) {
+      throw new ForbiddenException(
+        'User does not have permission to refund payments',
+      );
+    }
+
+    refoundPaymentDto.refundedBy = req.user.id;
+
+    return this.paymentsService.refound(idParamDto, refoundPaymentDto);
   }
 }

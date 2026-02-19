@@ -15,7 +15,7 @@ export class AuthGuard implements CanActivate {
   constructor(
     @Inject('SUPABASE_CLIENT') private readonly supabase: SupabaseClient,
     @Inject('DRIZZLE') private readonly db: DrizzleDb,
-  ) {}
+  ) { }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
@@ -40,6 +40,7 @@ export class AuthGuard implements CanActivate {
         vtrNumber: accounts.vtrNumber,
         status: accounts.status,
         name: accounts.name,
+        vehicleType: accounts.vehicleType,
       })
       .from(accounts)
       .where(eq(accounts.authId, authUser.id));
@@ -62,6 +63,7 @@ export class AuthGuard implements CanActivate {
       vtrNumber: account.vtrNumber,
       status: account.status,
       name: account.name,
+      vehicleType: account.vehicleType,
     };
 
     return true;

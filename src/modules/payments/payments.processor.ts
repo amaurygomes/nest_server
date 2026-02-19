@@ -2,10 +2,16 @@ import { Processor, WorkerHost, OnWorkerEvent } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import type { DrizzleDb } from 'src/providers/database/drizzle/drizzle.types';
 import { Inject, Logger } from '@nestjs/common';
-import { accounts, payments } from 'src/providers/database/drizzle/schema';
+import {
+  accounts,
+  payments,
+  subscriptions,
+  plans,
+} from 'src/providers/database/drizzle/schema';
 import { eq } from 'drizzle-orm';
 import { EfiWebhookDto } from './dto/efi-webhook.dto';
 import { MachineService } from 'src/providers/machine/machine.service';
+import { addDays, addMonths, addYears, format } from 'date-fns';
 
 @Processor('payment-updates')
 export class PaymentsProcessor extends WorkerHost {
@@ -49,8 +55,66 @@ export class PaymentsProcessor extends WorkerHost {
     }
 
     this.logger.log(
-      `Payment ${updatedPayment.id} status updated to COMPLETED. Now updating machine status.`,
+      `Payment ${updatedPayment.id} status updated to COMPLETED.`,
     );
+
+    let newExpiryDate: Date | null = null;
+    let machineIdToUpdate: string | null = null;
+
+    // Handle Subscription Activation & Extension
+    if (updatedPayment.subscriptionId) {
+      this.logger.log(
+        `Payment ${updatedPayment.id} appears linked to subscription ${updatedPayment.subscriptionId}. Processing renewal...`,
+      );
+
+      // Fetch Subscription and Plan
+      const [subscription] = await this.db
+        .select()
+        .from(subscriptions)
+        .where(eq(subscriptions.id, updatedPayment.subscriptionId));
+
+      if (subscription) {
+        const [plan] = await this.db
+          .select()
+          .from(plans)
+          .where(eq(plans.id, subscription.planId));
+
+        if (plan) {
+          // Calculate New Expiry Date (Cumulative Pre-Paid Logic)
+          const now = new Date();
+          let baseDate = now;
+
+          // If subscription is active and has future expiration, add to it.
+          if (
+            subscription.status === 'ACTIVE' &&
+            subscription.nextBillingDate > now
+          ) {
+            baseDate = new Date(subscription.nextBillingDate);
+          }
+
+          newExpiryDate = this.calculateNewDate(baseDate, plan.interval);
+
+          await this.db
+            .update(subscriptions)
+            .set({
+              status: 'ACTIVE',
+              nextBillingDate: newExpiryDate,
+              updatedAt: new Date(),
+            })
+            .where(eq(subscriptions.id, subscription.id));
+
+          this.logger.log(
+            `Subscription ${subscription.id} extended to ${newExpiryDate.toISOString()}.`,
+          );
+        } else {
+          this.logger.error(`Plan not found for subscription ${subscription.id}`);
+        }
+      } else {
+        this.logger.error(`Subscription ${updatedPayment.subscriptionId} not found`);
+      }
+    }
+
+    this.logger.log('Now updating machine status.');
 
     try {
       const [account] = await this.db
@@ -69,12 +133,20 @@ export class PaymentsProcessor extends WorkerHost {
         };
       }
 
+      machineIdToUpdate = account.machineId;
+
+      // Update Machine
+      const updateData: any = {
+        status_condutor: 'A',
+      };
+
+      if (newExpiryDate) {
+        updateData.observacao_interna_3 = format(newExpiryDate, 'dd/MM/yyyy HH:mm:ss');
+      }
+
       await this.machineService.updateAccountData(
         { id: account.machineId },
-        {
-          status_condutor: 'A',
-          observacao_interna_3: new Date().toISOString(), // Sera feito calculo ainda para vencimento
-        },
+        updateData,
       );
 
       this.logger.log(
@@ -84,6 +156,7 @@ export class PaymentsProcessor extends WorkerHost {
         paymentId: updatedPayment.id,
         status: 'completed',
         machineStatus: 'updated',
+        newExpiry: newExpiryDate,
       };
     } catch (error) {
       this.logger.error(
@@ -91,6 +164,21 @@ export class PaymentsProcessor extends WorkerHost {
         error.stack,
       );
       throw error;
+    }
+  }
+
+  private calculateNewDate(startDate: Date, interval: string): Date {
+    switch (interval) {
+      case 'WEEKLY':
+        return addDays(startDate, 7);
+      case 'MONTHLY':
+        return addMonths(startDate, 1);
+      case 'YEARLY':
+        return addYears(startDate, 1);
+      case 'DAILY':
+        return addDays(startDate, 1);
+      default:
+        return addMonths(startDate, 1);
     }
   }
 

@@ -25,7 +25,7 @@ export class AuthService {
     @Inject('DRIZZLE') private readonly db: DrizzleDb,
     @Inject('SUPABASE_CLIENT') private readonly supabaseClient: SupabaseClient,
     private readonly accountsService: AccountsService,
-  ) {}
+  ) { }
 
   async signUp(signUpDto: SignUpDto) {
     const accountEmail = await this.getAccountEmail(signUpDto.cpf);
@@ -48,6 +48,7 @@ export class AuthService {
       await this.accountsService.linkUserAccount({
         authId: data.user.id,
         cpf: signUpDto.cpf,
+        vehicleType: signUpDto.vehicleType,
       });
     } catch (err) {
       await this.supabaseClient.auth.admin.deleteUser(data.user.id);

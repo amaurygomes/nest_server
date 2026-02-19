@@ -27,4 +27,12 @@ export class UpdateAccountDto {
   @IsEnum(UserRole)
   @IsOptional()
   role?: UserRole;
+
+  @IsString()
+  @IsOptional()
+  vtrNumber?: string;
+
+  @IsString()
+  @IsOptional()
+  vehicleType?: string;
 }

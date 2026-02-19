@@ -13,13 +13,18 @@ import * as schema from 'src/providers/database/drizzle/schema';
 import { IdRequestDto } from './dto/id-request.dto';
 import { LinkAccountDto } from './dto/link-account.dto';
 import { AccountDto } from './dto/account.dto';
+import { FindAccountQueryDto } from './dto/find-account-query.dto';
+import { count, desc, ilike, SQL } from 'drizzle-orm';
+import { MachineService } from 'src/providers/machine/machine.service';
+import { UserStatus } from './dto/create-account.dto';
 
 @Injectable()
 export class AccountsService {
   constructor(
     @Inject(DRIZZLE)
     private readonly db: DrizzleDb,
-  ) {}
+    private readonly machineService: MachineService,
+  ) { }
 
   async create(createAccountDto: CreateAccountDto) {
     try {
@@ -63,11 +68,65 @@ export class AccountsService {
     }
   }
 
-  async findAll() {
-    return await this.db
+  async findAll(query: FindAccountQueryDto) {
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 20;
+    const offset = (page - 1) * limit;
+
+    const filters: SQL[] = [isNull(schema.accounts.deletedAt)];
+
+    if (query.name) {
+      filters.push(ilike(schema.accounts.name, `%${query.name}%`));
+    }
+
+    if (query.cpf) {
+      filters.push(eq(schema.accounts.cpf, query.cpf));
+    }
+
+    if (query.email) {
+      filters.push(ilike(schema.accounts.email, `%${query.email}%`));
+    }
+
+    if (query.vehicleType) {
+      filters.push(eq(schema.accounts.vehicleType, query.vehicleType as any));
+    }
+
+    if (query.vtr) {
+      // VTR Number typically needs exact match or loose? User said "Search by VTR".
+      // Usually VTR is short, so maybe exact or ilike. Let's use ilike for flexibility.
+      filters.push(ilike(schema.accounts.vtrNumber, `%${query.vtr}%`));
+    }
+
+    const whereClause = and(...filters);
+
+    const dataPromise = this.db
       .select()
       .from(schema.accounts)
-      .where(isNull(schema.accounts.deletedAt));
+      .where(whereClause)
+      .orderBy(desc(schema.accounts.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    const totalPromise = this.db
+      .select({ value: count() })
+      .from(schema.accounts)
+      .where(whereClause);
+
+    const [accounts, totalResult] = await Promise.all([
+      dataPromise,
+      totalPromise,
+    ]);
+
+    const total = Number(totalResult[0].value);
+    const lastPage = Math.ceil(total / limit);
+
+    return {
+      data: accounts as AccountDto[],
+      total,
+      page,
+      lastPage,
+      limit,
+    };
   }
 
   async findOne(idRequestDto: IdRequestDto): Promise<AccountDto> {
@@ -90,10 +149,14 @@ export class AccountsService {
 
   async update(idRequestDto: IdRequestDto, updateAccountDto: UpdateAccountDto) {
     try {
+      const { vehicleType, status, ...rest } = updateAccountDto;
+
       const [updatedAccount] = await this.db
         .update(schema.accounts)
         .set({
-          ...updateAccountDto,
+          ...rest,
+          status: status, // Status update
+          vehicleType: vehicleType as any,
           updatedAt: new Date(),
         })
         .where(
@@ -106,6 +169,31 @@ export class AccountsService {
 
       if (!updatedAccount) {
         throw new NotFoundException('Account not found for update.');
+      }
+
+      // SYNC WITH MACHINE
+      if (updatedAccount.machineId) {
+        try {
+          await this.machineService.updateAccountData(
+            { id: updatedAccount.machineId },
+            {
+              nome: updateAccountDto.name,
+              email: updateAccountDto.email,
+              numero_viatura: updateAccountDto.vtrNumber,
+              // Mapping local status to machine status.
+              // A -> A (Ativo)
+              // I -> I (Inativo)
+              // E -> E (Em Análise)
+              // S -> S (Suspenso)
+              // R -> R (Rejeitado)
+              // F -> F (Fila de Espera)
+              status_condutor: status ? status : undefined
+            }
+          );
+        } catch (syncError) {
+          console.error('Failed to sync account update with Machine:', syncError);
+          // We don't fail the written update, just log the sync failure.
+        }
       }
 
       return updatedAccount;
@@ -121,6 +209,7 @@ export class AccountsService {
       .set({
         authId: linkAccountDto.authId,
         updatedAt: new Date(),
+        ...(linkAccountDto.vehicleType ? { vehicleType: linkAccountDto.vehicleType as any } : {}),
       })
       .where(
         and(
