@@ -18,6 +18,7 @@ import { AccountsService } from '../accounts/accounts.service';
 import { access } from 'fs';
 import e from 'express';
 import { UpdatePasswordDto } from './dto/update-password.dto';
+import { LogsService } from '../logs/logs.service';
 
 @Injectable()
 export class AuthService {
@@ -25,13 +26,17 @@ export class AuthService {
     @Inject('DRIZZLE') private readonly db: DrizzleDb,
     @Inject('SUPABASE_CLIENT') private readonly supabaseClient: SupabaseClient,
     private readonly accountsService: AccountsService,
+    private readonly logsService: LogsService,
   ) { }
 
+  /**
+   * Registers a new user and links to an existing account.
+   */
   async signUp(signUpDto: SignUpDto) {
-    const accountEmail = await this.getAccountEmail(signUpDto.cpf);
+    const account = await this.getAccountBasicInfo(signUpDto.cpf);
 
     const { data, error } = await this.supabaseClient.auth.admin.createUser({
-      email: accountEmail,
+      email: account.email,
       password: signUpDto.password,
       email_confirm: true,
     });
@@ -49,11 +54,19 @@ export class AuthService {
         authId: data.user.id,
         cpf: signUpDto.cpf,
         vehicleType: signUpDto.vehicleType,
+        termsAccepted: signUpDto.termsAccepted,
       });
     } catch (err) {
       await this.supabaseClient.auth.admin.deleteUser(data.user.id);
       throw new InternalServerErrorException('Failed to link user account');
     }
+
+    // Log Signup
+    await this.logsService.logUserAction(
+      account.id,
+      'SIGN_UP',
+      `User signed up with CPF ${signUpDto.cpf}`
+    );
 
     return {
       message: 'User created and account linked successfully',
@@ -61,21 +74,27 @@ export class AuthService {
     };
   }
 
+  /**
+   * Authenticates a user.
+   */
   async signIn(signInDto: SignInDto) {
-    const accountEmail = await this.getAccountEmail(signInDto.cpf);
-
-    if (!accountEmail) {
-      throw new NotFoundException('Account with provided CPF not found.');
-    }
+    const account = await this.getAccountBasicInfo(signInDto.cpf);
 
     const { data, error } = await this.supabaseClient.auth.signInWithPassword({
-      email: accountEmail,
+      email: account.email,
       password: signInDto.password,
     });
 
     if (error) {
       throw new UnauthorizedException('Invalid credentials');
     }
+
+    // Log Login
+    await this.logsService.logUserAction(
+      account.id,
+      'LOGIN',
+      `User logged in`
+    );
 
     return {
       message: 'Signed in successfully',
@@ -91,6 +110,10 @@ export class AuthService {
     };
   }
 
+  /**
+   * Signs out a user (invalidates session).
+   * @param signOutDto - Token to invalidate.
+   */
   async signOut(signOutDto: SignOutDto) {
     const { error } = await this.supabaseClient.auth.admin.signOut(
       signOutDto.token,
@@ -103,6 +126,10 @@ export class AuthService {
     return { message: 'Signed out successfully' };
   }
 
+  /**
+   * Requests a password reset email.
+   * @param passwordRequestDto - Email address.
+   */
   async passwordRequest(passwordRequestDto: PasswordRequestDto) {
     const { error } = await this.supabaseClient.auth.resetPasswordForEmail(
       passwordRequestDto.email,
@@ -117,6 +144,10 @@ export class AuthService {
     return { message: 'If the email exists, a reset link has been sent' };
   }
 
+  /**
+   * Updates the authenticated user's password.
+   * @param updatePasswordDto - New password.
+   */
   async updatePassword(updatePasswordDto: UpdatePasswordDto) {
     const { error } = await this.supabaseClient.auth.updateUser({
       password: updatePasswordDto.password,
@@ -131,18 +162,25 @@ export class AuthService {
     return { message: 'Password updated successfully' };
   }
 
-  async getAccountEmail(cpf: string): Promise<string> {
+  /**
+   * Retrieves basic account info (ID, Email) by CPF.
+   * @param cpf - User CPF.
+   */
+  async getAccountBasicInfo(cpf: string): Promise<{ id: string; email: string }> {
     const res = await this.db
-      .select()
+      .select({
+        id: accounts.id,
+        email: accounts.email,
+      })
       .from(accounts)
       .where(eq(accounts.cpf, cpf));
 
-    const accountEmail = res[0]?.email;
+    const account = res[0];
 
-    if (!accountEmail) {
+    if (!account) {
       throw new NotFoundException('Account with provided CPF not found.');
     }
 
-    return accountEmail;
+    return account;
   }
 }

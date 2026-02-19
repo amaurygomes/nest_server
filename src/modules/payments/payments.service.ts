@@ -21,6 +21,7 @@ import {
   type IPaymentGateway,
   PAYMENT_GATEWAY_TOKEN,
 } from 'src/providers/payment-gateways/payment-gateway.interface';
+import { LogsService } from '../logs/logs.service';
 
 @Injectable()
 export class PaymentsService {
@@ -29,8 +30,13 @@ export class PaymentsService {
     @Inject(PAYMENT_GATEWAY_TOKEN)
     private readonly paymentGateway: IPaymentGateway,
     private readonly machineService: MachineService,
+    private readonly logsService: LogsService,
   ) { }
 
+  /**
+   * Creates a new Payment Charge via the Payment Gateway (PIX).
+   * @param createPaymentDto - Payment details.
+   */
   async create(createPaymentDto: CreatePaymentDto): Promise<PaymentDto> {
     const { accountId, amount, description } = createPaymentDto;
 
@@ -78,6 +84,13 @@ export class PaymentsService {
         );
       }
 
+      // Log Creation
+      await this.logsService.logUserAction(
+        accountId,
+        'CREATE_PAYMENT',
+        `Generated PIX payment of R$ ${(amount / 100).toFixed(2)}`
+      );
+
       return payment;
     } catch (error) {
       console.error('Error creating payment charge:', error);
@@ -87,6 +100,10 @@ export class PaymentsService {
     }
   }
 
+  /**
+   * Retrieves a paginated list of payments with filters.
+   * @param query - Filter parameters.
+   */
   async findAll(query: FindPaymentQueryDto): Promise<PaymentListDto> {
     const page = Number(query.page) || 1;
     const limit = Number(query.limit) || 20;
@@ -141,6 +158,11 @@ export class PaymentsService {
     };
   }
 
+  /**
+   * Finds a specific payment by ID.
+   * @param idParamDto - Payment ID.
+   * @param findOnePaymentDto - Optional filters.
+   */
   async findOne(
     idParamDto: IdParamDto,
     findOnePaymentDto: FindOnePaymentDto,
@@ -170,6 +192,11 @@ export class PaymentsService {
     return payment as PaymentDto;
   }
 
+  /**
+   * Updates a payment record.
+   * @param idParamDto - Payment ID.
+   * @param updatePaymentDto - Data to update.
+   */
   async update(
     idParamDto: IdParamDto,
     updatePaymentDto: UpdatePaymentDto,
@@ -187,9 +214,21 @@ export class PaymentsService {
       .where(eq(payments.id, id))
       .returning();
 
+    // Log Update
+    await this.logsService.logUserAction(
+      updated.accountId,
+      'UPDATE_PAYMENT',
+      `Payment ${id} updated via API`
+    );
+
     return updated;
   }
 
+  /**
+   * Refunds a payment and reverts any associated subscription changes.
+   * @param idParamDto - Payment ID.
+   * @param refoundPaymentDto - Refund reasoning and actor.
+   */
   async refound(
     idParamDto: IdParamDto,
     refoundPaymentDto: RefoundPaymentDto,
@@ -272,9 +311,23 @@ export class PaymentsService {
       }
     }
 
+    // Log Refund
+    if (refunded) {
+      await this.logsService.logUserAction(
+        refunded.accountId,
+        'REFUND_PAYMENT',
+        `Refunded R$ ${refunded.amount}. Reason: ${refoundPaymentDto.refundReason}`
+      );
+    }
+
     return refunded;
   }
 
+  /**
+   * Manually approves a pending payment.
+   * @param idParamDto - Payment ID.
+   * @param approvedBy - ID of the admin approving the payment.
+   */
   async approve(
     idParamDto: IdParamDto,
     approvedBy: string,
@@ -297,6 +350,13 @@ export class PaymentsService {
     if (!approved) {
       throw new NotFoundException(`Payment with ID ${idParamDto.id} not found`);
     }
+
+    // Log Approval
+    await this.logsService.logUserAction(
+      approved.accountId,
+      'APPROVE_PAYMENT',
+      `Payment ${idParamDto.id} approved manually by ${approvedBy}`
+    );
 
     return approved;
   }

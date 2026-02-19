@@ -41,6 +41,7 @@ export const accounts = d.pgTable('accounts', {
   role: roleEnum('role').default('USER').notNull(),
   isPartner: d.boolean('is_partner').default(false).notNull(),
   vehicleType: vehicleTypeEnum('vehicle_type'),
+  termsAcceptedAt: d.timestamp('terms_accepted_at', { withTimezone: true }),
 
   createdAt: d
     .timestamp('created_at', { withTimezone: true })
@@ -136,6 +137,22 @@ export const scheduleLogs = d.pgTable('schedule_logs', {
   status: d.text('status').notNull(),
   message: d.text('message'),
   details: d.jsonb('details'),
+
+  createdAt: d
+    .timestamp('created_at', { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+export const errorLogs = d.pgTable('error_logs', {
+  id: d.uuid('id').defaultRandom().primaryKey(),
+
+  statusCode: d.integer('status_code').notNull(),
+  message: d.text('message').notNull(),
+  stack: d.text('stack'),
+  path: d.text('path'),
+  method: d.text('method'),
+  userId: d.uuid('user_id').references(() => accounts.id),
 
   createdAt: d
     .timestamp('created_at', { withTimezone: true })

@@ -1,6 +1,6 @@
 
-import { Controller, Get, Query, UseGuards, Req, ForbiddenException, Put, Param, Body } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Controller, Get, Query, UseGuards, Req, ForbiddenException, Put, Param, Body, Delete } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiTags, ApiResponse } from '@nestjs/swagger';
 import { AccountsService } from './accounts.service';
 import { AuthGuard } from '../auth/auth.guard';
 import { FindAccountQueryDto } from './dto/find-account-query.dto';
@@ -33,5 +33,17 @@ export class AccountsController {
         }
 
         return this.accountsService.update({ id }, updateAccountDto);
+    }
+
+    @Delete(':id/anonymize')
+    @ApiOperation({ summary: 'Anonymize user data (Right to be Forgotten - LGPD)' })
+    @ApiResponse({ status: 200, description: 'User data anonymized successfully.' })
+    // @Roles('ADMIN', 'OWNER') // Or allow USER to self-delete if policy allows. For now ADMIN.
+    async anonymize(@Req() req, @Param('id') id: string) {
+        const isPrivileged = ['OWNER', 'ADMIN'].includes(req.user.role);
+        if (!isPrivileged) {
+            throw new ForbiddenException('You do not have permission to anonymize accounts.');
+        }
+        return this.accountsService.anonymize({ id });
     }
 }

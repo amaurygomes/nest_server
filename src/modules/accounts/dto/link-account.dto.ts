@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, IsBoolean } from 'class-validator';
 
 export class LinkAccountDto {
   @IsString()
@@ -12,4 +12,9 @@ export class LinkAccountDto {
   @IsString()
   @IsOptional()
   vehicleType?: string;
+
+  @IsBoolean()
+  @IsNotEmpty()
+  @IsOptional()
+  termsAccepted?: boolean;
 }

@@ -11,6 +11,11 @@ import { PaymentsModule } from './modules/payments/payments.module';
 import { PaymentGatewayModule } from './providers/payment-gateways/payment-gateway.module';
 import { QueueModule } from './providers/queue/queue.module';
 import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
+import { MetricsModule } from './modules/metrics/metrics.module';
+import { LogsModule } from './modules/logs/logs.module';
+import { APP_FILTER, APP_GUARD } from '@nestjs/core';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 
 @Module({
   imports: [
@@ -27,9 +32,27 @@ import { SubscriptionsModule } from './modules/subscriptions/subscriptions.modul
     SchedulesModule,
     PaymentsModule,
     PaymentGatewayModule.register(),
+    PaymentGatewayModule.register(),
     SubscriptionsModule,
+    MetricsModule,
+    LogsModule,
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000,
+        limit: 10,
+      },
+    ]),
   ],
   controllers: [],
-  providers: [],
+  providers: [
+    {
+      provide: APP_FILTER,
+      useClass: AllExceptionsFilter,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule { }

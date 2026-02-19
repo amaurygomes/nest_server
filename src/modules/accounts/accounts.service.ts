@@ -17,6 +17,7 @@ import { FindAccountQueryDto } from './dto/find-account-query.dto';
 import { count, desc, ilike, SQL } from 'drizzle-orm';
 import { MachineService } from 'src/providers/machine/machine.service';
 import { UserStatus } from './dto/create-account.dto';
+import { LogsService } from '../logs/logs.service';
 
 @Injectable()
 export class AccountsService {
@@ -24,8 +25,13 @@ export class AccountsService {
     @Inject(DRIZZLE)
     private readonly db: DrizzleDb,
     private readonly machineService: MachineService,
+    private readonly logsService: LogsService,
   ) { }
 
+  /**
+   * Creates a new account.
+   * @param createAccountDto - Data for creating the account.
+   */
   async create(createAccountDto: CreateAccountDto) {
     try {
       const [account] = await this.db
@@ -33,12 +39,24 @@ export class AccountsService {
         .values(createAccountDto)
         .returning();
 
+      // Log Creation
+      await this.logsService.logUserAction(
+        account.id,
+        'CREATE_ACCOUNT',
+        `Account created for CPF ${createAccountDto.cpf}`
+      );
+
       return account;
     } catch (error: any) {
       throw new InternalServerErrorException('Error creating account');
     }
   }
 
+  /**
+   * Bulk creates accounts from an array of data.
+   * Useful for data migration or mass import.
+   * @param data - Array of account objects.
+   */
   async bulkCreate(data: any[]) {
     if (data.length === 0) {
       return { success: true, message: 'No accounts to process.' };
@@ -68,6 +86,10 @@ export class AccountsService {
     }
   }
 
+  /**
+   * Retrieves a paginated list of accounts with optional filters.
+   * @param query - Filter and pagination parameters.
+   */
   async findAll(query: FindAccountQueryDto) {
     const page = Number(query.page) || 1;
     const limit = Number(query.limit) || 20;
@@ -129,6 +151,10 @@ export class AccountsService {
     };
   }
 
+  /**
+   * Finds a single account by ID (Machine ID).
+   * @param idRequestDto - Object containing the ID.
+   */
   async findOne(idRequestDto: IdRequestDto): Promise<AccountDto> {
     const [account] = await this.db
       .select()
@@ -147,6 +173,11 @@ export class AccountsService {
     return account as AccountDto;
   }
 
+  /**
+   * Updates an existing account and syncs changes to the external Machine.
+   * @param idRequestDto - ID of the account to update.
+   * @param updateAccountDto - New data.
+   */
   async update(idRequestDto: IdRequestDto, updateAccountDto: UpdateAccountDto) {
     try {
       const { vehicleType, status, ...rest } = updateAccountDto;
@@ -196,6 +227,20 @@ export class AccountsService {
         }
       }
 
+      // Log Action
+      await this.logsService.logUserAction(
+        updatedAccount.id,
+        'UPDATE_PROFILE',
+        `Updated profile details (Status: ${status || 'Unchanged'}, VTR: ${updateAccountDto.vtrNumber || 'Unchanged'})`
+      );
+
+      // Log Action
+      await this.logsService.logUserAction(
+        updatedAccount.id,
+        'UPDATE_PROFILE',
+        `Updated profile details (Status: ${status || 'Unchanged'}, VTR: ${updateAccountDto.vtrNumber || 'Unchanged'})`
+      );
+
       return updatedAccount;
     } catch (error: any) {
       if (error instanceof NotFoundException) throw error;
@@ -203,6 +248,11 @@ export class AccountsService {
     }
   }
 
+  /**
+   * Links an Auth ID (Supabase) to an existing account by CPF.
+   * Used during Sign Up.
+   * @param linkAccountDto - Link data (AuthID, CPF).
+   */
   async linkUserAccount(linkAccountDto: LinkAccountDto) {
     const [linkedAccount] = await this.db
       .update(schema.accounts)
@@ -210,6 +260,7 @@ export class AccountsService {
         authId: linkAccountDto.authId,
         updatedAt: new Date(),
         ...(linkAccountDto.vehicleType ? { vehicleType: linkAccountDto.vehicleType as any } : {}),
+        ...(linkAccountDto.termsAccepted ? { termsAcceptedAt: new Date() } : {}),
       })
       .where(
         and(
@@ -226,6 +277,10 @@ export class AccountsService {
     return linkedAccount;
   }
 
+  /**
+   * Soft deletes an account.
+   * @param idRequestDto - ID of the account to delete.
+   */
   async remove(idRequestDto: IdRequestDto) {
     const [deletedAccount] = await this.db
       .update(schema.accounts)
@@ -245,9 +300,73 @@ export class AccountsService {
       throw new NotFoundException('Account not found or already deleted.');
     }
 
+    // Log Action
+    await this.logsService.logUserAction(
+      deletedAccount.id,
+      'DELETE_ACCOUNT',
+      `Account marked as deleted (Soft Delete)`
+    );
+
     return {
       success: true,
       message: 'Account successfully deleted.',
+    };
+  }
+
+  /**
+   * Anonymizes user data (Right to be Forgotten - LGPD).
+   * Keeps ID for historical integrity but removes PII.
+   * @param idRequestDto - Account ID.
+   */
+  async anonymize(idRequestDto: IdRequestDto) {
+    const { id } = idRequestDto;
+
+    // Check if account exists
+    const [account] = await this.db
+      .select()
+      .from(schema.accounts)
+      .where(eq(schema.accounts.id, id));
+
+    if (!account) {
+      throw new NotFoundException('Account not found');
+    }
+
+    // Anonymization logic:
+    // Append timestamp to unique fields to release constraints (cpf, email, authId, machineId, chavePix)
+    // Clear name, clear other PII.
+    const timestamp = Date.now();
+    const anonymizedSuffix = `_deleted_${timestamp}`;
+
+    await this.db
+      .update(schema.accounts)
+      .set({
+        name: 'Anonymized User',
+        email: `anonymized_${id}@deleted.com`, // Email must be unique
+        cpf: `00000000000${anonymizedSuffix}`, // CPF must be unique. 
+        // Note: 11 zeros + suffix might exceed typical CPF length if validation is strict, 
+        // but schema.ts says text. Let's assume text.
+        // If CPF has unique index, we need a unique value.
+        // Using UUID-like suffix or timestamp is safer.
+        authId: `anonymized_${id}`,
+        machineId: `anonymized_${id}`,
+        chavePix: null,
+        vtrNumber: '0000',
+        status: 'I', // Inactive
+        deletedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(schema.accounts.id, id));
+
+    // Log Action
+    await this.logsService.logUserAction(
+      id,
+      'ANONYMIZE_ACCOUNT',
+      'User requested Right to be Forgotten (LGPD). Data anonymized.'
+    );
+
+    return {
+      success: true,
+      message: 'Account anonymized successfully.',
     };
   }
 }

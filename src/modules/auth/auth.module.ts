@@ -3,9 +3,11 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { AccountsModule } from '../accounts/accounts.module';
 
+import { LogsModule } from '../logs/logs.module';
+
 @Module({
-  imports: [AccountsModule],
+  imports: [AccountsModule, LogsModule],
   controllers: [AuthController],
   providers: [AuthService],
 })
-export class AuthModule {}
+export class AuthModule { }
