@@ -18,21 +18,13 @@ export class CreatePaymentDto {
   accountId: string;
 
   @ApiProperty({
-    description: 'The total amount of the transaction',
-    example: 150.5,
+    description: 'The total amount of the transaction in cents',
+    example: 15050,
   })
-  @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(0.01)
+  @IsNumber()
+  @Min(1)
   @IsNotEmpty()
   amount: number;
-
-  @ApiProperty({
-    description: 'External gateway transaction identifier',
-    example: 'TX_ORDER_998877',
-  })
-  @IsString()
-  @IsNotEmpty()
-  transactionId: string;
 
   @ApiPropertyOptional({
     description: 'Brief description of the payment purpose',
@@ -41,20 +33,4 @@ export class CreatePaymentDto {
   @IsString()
   @IsOptional()
   description?: string;
-
-  @ApiPropertyOptional({
-    description: 'PIX Copy and Paste string for manual payment',
-    example: '00020126580014BR.GOV.BCB.PIX0136...',
-  })
-  @IsString()
-  @IsOptional()
-  pixCopyPaste?: string;
-
-  @ApiPropertyOptional({
-    description: 'Base64 encoded string of the PIX QR Code image',
-    example: 'iVBORw0KGgoAAAANSUhEUgA...',
-  })
-  @IsString()
-  @IsOptional()
-  pixImageBase64?: string;
 }

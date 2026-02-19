@@ -8,35 +8,80 @@ import {
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { UpdatePaymentDto } from './dto/update-payment.dto';
 import type { DrizzleDb } from 'src/providers/database/drizzle/drizzle.types';
-import { payments } from 'src/providers/database/drizzle/schema';
-import { and, count, desc, eq, notInArray, or, SQL } from 'drizzle-orm';
+import { accounts, payments } from 'src/providers/database/drizzle/schema';
+import { and, count, desc, eq, notInArray, SQL } from 'drizzle-orm';
 import { IdParamDto } from './dto/id-param.dto';
 import { PaymentDto, PaymentListDto } from './dto/payments.dto';
 import { FindPaymentQueryDto } from './dto/find-payment-query.dto';
 import { RefoundPaymentDto } from './dto/refound-payment.dto';
 import { FindOnePaymentDto } from './dto/find-one-payment-dto';
+import {
+  type IPaymentGateway,
+  PAYMENT_GATEWAY_TOKEN,
+} from 'src/providers/payment-gateways/payment-gateway.interface';
 
 @Injectable()
 export class PaymentsService {
-  constructor(@Inject('DRIZZLE') private readonly db: DrizzleDb) {}
+  constructor(
+    @Inject('DRIZZLE') private readonly db: DrizzleDb,
+    @Inject(PAYMENT_GATEWAY_TOKEN)
+    private readonly paymentGateway: IPaymentGateway,
+  ) {}
 
   async create(createPaymentDto: CreatePaymentDto): Promise<PaymentDto> {
-    const { amount, ...paymentData } = createPaymentDto;
+    const { accountId, amount, description } = createPaymentDto;
 
-    const [payment] = await this.db
-      .insert(payments)
-      .values({
-        ...paymentData,
-        accountId: createPaymentDto.accountId,
-        amount: amount.toString(),
+    const [account] = await this.db
+      .select({
+        name: accounts.name,
+        cpf: accounts.cpf,
+        email: accounts.email,
       })
-      .returning();
+      .from(accounts)
+      .where(eq(accounts.id, accountId));
 
-    if (!payment) {
-      throw new InternalServerErrorException('Error creating payment');
+    if (!account) {
+      throw new NotFoundException(`Account with ID ${accountId} not found.`);
     }
 
-    return payment;
+    try {
+      const charge = await this.paymentGateway.createCharge({
+        value: amount,
+        description,
+        customer: {
+          name: account.name,
+          document: account.cpf,
+          email: account.email,
+        },
+      });
+
+      const [payment] = await this.db
+        .insert(payments)
+        .values({
+          accountId,
+          amount: (amount / 100).toFixed(2),
+          description,
+          transactionId: charge.transactionId,
+          status: 'PENDING',
+          paymentMethod: 'PIX',
+          pixCopyPaste: charge.qrCode,
+          pixImageBase64: charge.qrCodeImageBase64,
+        })
+        .returning();
+
+      if (!payment) {
+        throw new InternalServerErrorException(
+          'Failed to save payment record after creating charge.',
+        );
+      }
+
+      return payment;
+    } catch (error) {
+      console.error('Error creating payment charge:', error);
+      throw new InternalServerErrorException(
+        'Error creating payment charge with gateway.',
+      );
+    }
   }
 
   async findAll(query: FindPaymentQueryDto): Promise<PaymentListDto> {

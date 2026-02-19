@@ -24,7 +24,7 @@ import { FindOnePaymentDto } from './dto/find-one-payment-dto';
 @ApiBearerAuth()
 @Controller('payments')
 export class PaymentsController {
-  constructor(private readonly paymentsService: PaymentsService) { }
+  constructor(private readonly paymentsService: PaymentsService) {}
 
   @Post()
   @ApiOperation({
@@ -81,13 +81,16 @@ export class PaymentsController {
       'Returns the details of a specific payment ID if the user has permission to access it.',
   })
   async findOne(
-    @Request() req, @Param() idParamDto: IdParamDto, @Body() findOnePaymentDto: FindOnePaymentDto =  {}): Promise<PaymentDto> {
+    @Request() req,
+    @Param() idParamDto: IdParamDto,
+    @Body() findOnePaymentDto: FindOnePaymentDto = {},
+  ): Promise<PaymentDto> {
     const { accountId } = req.user;
     const isPrivileged = ['OWNER', 'ADMIN', 'SUPPORT'].includes(req.user.role);
 
     const data: FindOnePaymentDto = {
-      accountId: isPrivileged 
-        ? (findOnePaymentDto?.accountId || undefined) 
+      accountId: isPrivileged
+        ? findOnePaymentDto?.accountId || undefined
         : accountId,
     };
 

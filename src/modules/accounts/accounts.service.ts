@@ -7,7 +7,7 @@ import {
 import { CreateAccountDto } from './dto/create-account.dto';
 import { UpdateAccountDto } from './dto/update-account.dto';
 import { DRIZZLE } from 'src/providers/database/drizzle/drizzle.module';
-import { eq, isNull, and } from 'drizzle-orm';
+import { eq, isNull, and, sql } from 'drizzle-orm';
 import type { DrizzleDb } from 'src/providers/database/drizzle/drizzle.types';
 import * as schema from 'src/providers/database/drizzle/schema';
 import { IdRequestDto } from './dto/id-request.dto';
@@ -35,18 +35,31 @@ export class AccountsService {
   }
 
   async bulkCreate(data: any[]) {
+    if (data.length === 0) {
+      return { success: true, message: 'No accounts to process.' };
+    }
+
     try {
       await this.db
         .insert(schema.accounts)
         .values(data)
-        .onConflictDoNothing({ target: schema.accounts.machineId });
+        .onConflictDoUpdate({
+          target: schema.accounts.machineId,
+          set: {
+            name: sql.raw('excluded.name'),
+            cpf: sql.raw('excluded.cpf'),
+            vtrNumber: sql.raw('excluded.vtr_number'),
+            email: sql.raw('excluded.email'),
+            chavePix: sql.raw('excluded.chave_pix'),
+            status: sql.raw('excluded.status'),
+            updatedAt: new Date(),
+          },
+        });
 
       return { success: true };
     } catch (error) {
       console.error('Error in bulk processing:', error);
-      throw new InternalServerErrorException(
-        'Error processing account batch',
-      );
+      throw new InternalServerErrorException('Error processing account batch');
     }
   }
 

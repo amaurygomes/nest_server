@@ -1,4 +1,3 @@
-
 export interface CreateChargeDto {
   value: number;
   description?: string;
@@ -12,13 +11,14 @@ export interface CreateChargeDto {
 export interface CreateChargeResponse {
   transactionId: string;
   status: string;
-  paymentLink?: string; 
+  paymentLink?: string;
   qrCode?: string;
   qrCodeImageBase64?: string;
 }
 
 export interface RefundDto {
   transactionId: string;
+  e2eId: string;
   value: number;
 }
 
@@ -27,9 +27,7 @@ export interface RefundResponse {
   status: string;
 }
 
-
 export interface IPaymentGateway {
-
   createCharge(data: CreateChargeDto): Promise<CreateChargeResponse>;
   refund(data: RefundDto): Promise<RefundResponse>;
 }

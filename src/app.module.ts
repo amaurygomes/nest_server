@@ -9,12 +9,14 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { SchedulesModule } from './modules/schedules/schedules.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { PaymentGatewayModule } from './providers/payment-gateways/payment-gateway.module';
+import { QueueModule } from './providers/queue/queue.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    QueueModule,
     ScheduleModule.forRoot(),
     DrizzleModule,
     AccountsModule,
