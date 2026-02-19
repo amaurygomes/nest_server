@@ -15,6 +15,8 @@ export class AccountsController {
 
     @Get()
     @ApiOperation({ summary: 'List all accounts (Admin only)' })
+    @ApiResponse({ status: 200, description: 'List of accounts retrieved successfully.' })
+    @ApiResponse({ status: 403, description: 'Forbidden. Requires ADMIN or SUPPORT role.' })
     findAll(@Req() req, @Query() query: FindAccountQueryDto) {
         const isPrivileged = ['OWNER', 'ADMIN', 'SUPPORT'].includes(req.user.role);
         if (!isPrivileged) {
@@ -26,6 +28,9 @@ export class AccountsController {
 
     @Put(':id')
     @ApiOperation({ summary: 'Update account details (Admin only)' })
+    @ApiResponse({ status: 200, description: 'Account updated successfully.' })
+    @ApiResponse({ status: 403, description: 'Forbidden. Requires ADMIN role.' })
+    @ApiResponse({ status: 404, description: 'Account not found.' })
     update(@Req() req, @Param('id') id: string, @Body() updateAccountDto: UpdateAccountDto) {
         const isPrivileged = ['OWNER', 'ADMIN'].includes(req.user.role);
         if (!isPrivileged) {
@@ -38,6 +43,8 @@ export class AccountsController {
     @Delete(':id/anonymize')
     @ApiOperation({ summary: 'Anonymize user data (Right to be Forgotten - LGPD)' })
     @ApiResponse({ status: 200, description: 'User data anonymized successfully.' })
+    @ApiResponse({ status: 403, description: 'Forbidden. Requires ADMIN role.' })
+    @ApiResponse({ status: 404, description: 'Account not found.' })
     // @Roles('ADMIN', 'OWNER') // Or allow USER to self-delete if policy allows. For now ADMIN.
     async anonymize(@Req() req, @Param('id') id: string) {
         const isPrivileged = ['OWNER', 'ADMIN'].includes(req.user.role);

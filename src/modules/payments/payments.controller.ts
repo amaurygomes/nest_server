@@ -16,7 +16,7 @@ import { IdParamDto } from './dto/id-param.dto';
 import { FindPaymentQueryDto } from './dto/find-payment-query.dto';
 import { PaymentDto, PaymentListDto } from './dto/payments.dto';
 import { AuthGuard } from '../auth/auth.guard';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags, ApiResponse } from '@nestjs/swagger';
 import { FindOnePaymentDto } from './dto/find-one-payment-dto';
 import { RefoundPaymentDto } from './dto/refound-payment.dto';
 
@@ -33,6 +33,9 @@ export class PaymentsController {
     description:
       'Registers a new payment. Non-privileged users have their account ID automatically assigned from their session.',
   })
+  @ApiResponse({ status: 201, description: 'Payment created successfully.' })
+  @ApiResponse({ status: 400, description: 'Bad Request.' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error.' })
   async create(
     @Request() req,
     @Body() createPaymentDto: CreatePaymentDto,
@@ -60,6 +63,8 @@ export class PaymentsController {
     description:
       'Retrieves a paginated list of payments. Regular users can only see their own payments, while admins can filter by any account.',
   })
+  @ApiResponse({ status: 200, description: 'Lists payments.' })
+  @ApiResponse({ status: 403, description: 'Forbidden.' })
   async findAll(
     @Request() req,
     @Query() findPaymentQueryDto: FindPaymentQueryDto,
@@ -81,6 +86,8 @@ export class PaymentsController {
     description:
       'Returns the details of a specific payment ID if the user has permission to access it.',
   })
+  @ApiResponse({ status: 200, description: 'Payment details.' })
+  @ApiResponse({ status: 404, description: 'Payment not found.' })
   async findOne(
     @Request() req,
     @Param() idParamDto: IdParamDto,
@@ -104,6 +111,9 @@ export class PaymentsController {
     description:
       'Manual approval of a pending payment. Restricted to users with OWNER, ADMIN, or SUPPORT roles.',
   })
+  @ApiResponse({ status: 200, description: 'Payment approved successfully.' })
+  @ApiResponse({ status: 403, description: 'Forbidden. Requires privilegies.' })
+  @ApiResponse({ status: 404, description: 'Payment not found.' })
   async approve(
     @Request() req,
     @Param() idParamDto: IdParamDto,
@@ -127,6 +137,9 @@ export class PaymentsController {
     description:
       'Refund a payment. Restricted to users with OWNER, ADMIN, or SUPPORT roles.',
   })
+  @ApiResponse({ status: 200, description: 'Payment refunded successfully.' })
+  @ApiResponse({ status: 403, description: 'Forbidden. Requires privilegies.' })
+  @ApiResponse({ status: 404, description: 'Payment not found.' })
   async refund(
     @Request() req,
     @Param() idParamDto: IdParamDto,

@@ -46,40 +46,74 @@ export class SubscriptionsService {
         return newPlan;
     }
 
-    async findAllPlans(vehicleType?: string, showAllIfNoType: boolean = false) {
-        if (!vehicleType) {
-            if (showAllIfNoType) {
-                // Return ALL plans (Admin view without filter)
-                return this.db.select().from(plans);
-            }
-            // Return universal plans only (targetVehicleTypes is null)
-            return this.db.select().from(plans).where(isNull(plans.targetVehicleTypes));
+    async updatePlan(id: string, updateData: Partial<CreatePlanDto>) {
+        const [updatedPlan] = await this.db
+            .update(plans)
+            .set({
+                name: updateData.name,
+                description: updateData.description,
+                price: updateData.price?.toString(),
+                interval: updateData.interval,
+                dailyLateFee: updateData.dailyLateFee?.toString(),
+                lateFeeAfter30Days: updateData.lateFeeAfter30Days?.toString(),
+                customPrices: updateData.customPrices,
+                tax: updateData.tax?.toString(),
+                targetVehicleTypes: updateData.targetVehicleTypes,
+                updatedAt: new Date(),
+            })
+            .where(eq(plans.id, id))
+            .returning();
+
+        if (!updatedPlan) {
+            throw new NotFoundException('Plan not found');
         }
+        return updatedPlan;
+    }
 
-        // Return universal plans OR plans targeting this vehicle type
-        // Note: targetVehicleTypes is a JSONB array. 
-        // We want: targetVehicleTypes IS NULL OR targetVehicleTypes @> [vehicleType]
-        // Drizzle specific syntax required.
-        // If simple JSON array check is tricky, we might need sql operator.
-        // But let's try arrayContains if supported for jsonb, or raw sql.
+    async findAllPlans(vehicleType?: string, showAllIfNoType: boolean = false) {
+        const baseFilter = isNull(plans.deletedAt);
 
-        // return this.db.select().from(plans).where(
-        //     or(
-        //         isNull(plans.targetVehicleTypes),
-        //         arrayContains(plans.targetVehicleTypes, [vehicleType]) 
-        //     )
-        // );
+        let targetFilter: any = undefined;
 
-        // Using safe SQL approach to avoid type issues if arrayContains isn't perfect for jsonb
-        // actually sql`...` is safer for JSONB containment
-
-        // Actually, let's use the Query Builder properly.
-        return this.db.select().from(plans).where(
-            or(
+        if (vehicleType) {
+            targetFilter = or(
                 isNull(plans.targetVehicleTypes),
                 sql`${plans.targetVehicleTypes}::jsonb @> ${JSON.stringify([vehicleType])}::jsonb`
-            )
-        );
+            );
+        } else if (!showAllIfNoType) {
+            targetFilter = isNull(plans.targetVehicleTypes);
+        }
+
+        return this.db
+            .select()
+            .from(plans)
+            .where(and(baseFilter, targetFilter));
+    }
+
+    async deletePlan(id: string) {
+        const [plan] = await this.db
+            .update(plans)
+            .set({ deletedAt: new Date() })
+            .where(eq(plans.id, id))
+            .returning();
+
+        if (!plan) {
+            throw new NotFoundException('Plan not found');
+        }
+        return plan;
+    }
+
+    async reactivatePlan(id: string) {
+        const [plan] = await this.db
+            .update(plans)
+            .set({ deletedAt: null })
+            .where(eq(plans.id, id))
+            .returning();
+
+        if (!plan) {
+            throw new NotFoundException('Plan not found');
+        }
+        return plan;
     }
 
     async createSubscription(createSubscriptionDto: CreateSubscriptionDto) {

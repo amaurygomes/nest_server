@@ -10,6 +10,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
         connection: {
           host: configService.getOrThrow<string>('REDIS_HOST'),
           port: configService.getOrThrow<number>('REDIS_PORT'),
+          password: configService.get<string>('REDIS_PASSWORD'),
         },
       }),
       inject: [ConfigService],
@@ -17,4 +18,4 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
   ],
   exports: [BullModule],
 })
-export class QueueModule {}
+export class QueueModule { }

@@ -1,6 +1,6 @@
 
 import { Controller, Get, UseGuards, Req, ForbiddenException } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags, ApiResponse } from '@nestjs/swagger';
 import { MetricsService } from './metrics.service';
 import { AuthGuard } from '../auth/auth.guard';
 
@@ -13,8 +13,10 @@ export class MetricsController {
 
     @Get('dashboard')
     @ApiOperation({ summary: 'Get comprehensive admin dashboard metrics' })
+    @ApiResponse({ status: 200, description: 'Dashboard data retrieved.' })
+    @ApiResponse({ status: 403, description: 'Forbidden. Owner/Admin only.' })
     async getDashboardMetrics(@Req() req) {
-        const isPrivileged = ['OWNER', 'ADMIN', 'SUPPORT'].includes(req.user.role);
+        const isPrivileged = ['OWNER', 'ADMIN'].includes(req.user.role);
         if (!isPrivileged) {
             throw new ForbiddenException('You do not have permission to access metrics.');
         }

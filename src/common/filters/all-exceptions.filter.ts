@@ -46,11 +46,14 @@ export class AllExceptionsFilter implements ExceptionFilter {
             message,
         };
 
+        // Capture original error message for logging
+        const originalMessage = exception instanceof Error ? exception.message : message;
+
         // Log to DB
         try {
             await this.logsService.logError({
                 statusCode: httpStatus,
-                message: typeof message === 'string' ? message : JSON.stringify(message),
+                message: originalMessage, // Log the REAL error
                 stack,
                 path: httpAdapter.getRequestUrl(request),
                 method: httpAdapter.getRequestMethod(request),

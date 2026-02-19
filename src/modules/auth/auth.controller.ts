@@ -1,4 +1,5 @@
 import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { SignInDto } from './dto/signin.dto';
 import { SignUpDto } from './dto/signup.dto';
@@ -15,7 +16,7 @@ import {
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService) { }
 
   @Post('sign-up')
   @ApiOperation({
@@ -24,6 +25,8 @@ export class AuthController {
       'Creates a new account in the system and links it with Supabase Auth.',
   })
   @ApiResponse({ status: 201, description: 'User created successfully.' })
+  @ApiResponse({ status: 400, description: 'Bad Request. Invalid data or user already exists.' })
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   signUp(@Body() signUpDto: SignUpDto) {
     return this.authService.signUp(signUpDto);
   }
@@ -35,6 +38,8 @@ export class AuthController {
       'Authenticates user via CPF and password, returning a JWT session token.',
   })
   @ApiResponse({ status: 200, description: 'Authenticated successfully.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized. Invalid credentials.' })
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   signIn(@Body() signInDto: SignInDto) {
     return this.authService.signIn(signInDto);
   }
@@ -45,6 +50,8 @@ export class AuthController {
     summary: 'Logout user',
     description: 'Invalidates the current session token.',
   })
+  @ApiResponse({ status: 200, description: 'Signed out successfully.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
   signOut(@Body() signOutDto: SignOutDto) {
     return this.authService.signOut(signOutDto);
   }
@@ -55,6 +62,8 @@ export class AuthController {
     description:
       'Sends a password recovery email if the provided email exists in our records.',
   })
+  @ApiResponse({ status: 200, description: 'Reset link sent if email exists.' })
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   passwordRequest(@Body() passwordRequestDto: PasswordRequestDto) {
     return this.authService.passwordRequest(passwordRequestDto);
   }
@@ -65,6 +74,8 @@ export class AuthController {
     description:
       'Updates the user password using the token received in the recovery email.',
   })
+  @ApiResponse({ status: 200, description: 'Password updated successfully.' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error.' })
   updatePassword(@Body() updatePasswordDto: UpdatePasswordDto) {
     return this.authService.updatePassword(updatePasswordDto);
   }

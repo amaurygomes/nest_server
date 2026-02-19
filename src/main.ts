@@ -17,7 +17,14 @@ async function bootstrap() {
   );
 
   app.setGlobalPrefix('api/v1');
-  app.enableCors();
+
+  // Enable CORS with environment variable configuration
+  const corsOrigin = process.env.CORS_ORIGIN || '*';
+  app.enableCors({
+    origin: corsOrigin === '*' ? '*' : corsOrigin.split(','),
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    credentials: true,
+  });
 
   const config = new DocumentBuilder()
     .setTitle('Driver System API Documentation')

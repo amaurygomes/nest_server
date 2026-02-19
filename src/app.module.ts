@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { DrizzleModule } from './providers/database/drizzle/drizzle.module';
 import { ConfigModule } from '@nestjs/config';
+import * as Joi from 'joi';
 import { AccountsModule } from './modules/accounts/accounts.module';
 import { SupabaseModule } from './providers/supabase/supabase.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -21,6 +22,15 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      validationSchema: Joi.object({
+        PORT: Joi.number().default(3000),
+        DATABASE_URL: Joi.string().required(),
+        SUPABASE_URL: Joi.string().required(),
+        SUPABASE_ROLE_KEY: Joi.string().required(),
+        REDIS_HOST: Joi.string().required(),
+        REDIS_PORT: Joi.number().required(),
+        CORS_ORIGIN: Joi.string().default('*'),
+      }),
     }),
     QueueModule,
     ScheduleModule.forRoot(),
@@ -31,7 +41,6 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
     MachineModule,
     SchedulesModule,
     PaymentsModule,
-    PaymentGatewayModule.register(),
     PaymentGatewayModule.register(),
     SubscriptionsModule,
     MetricsModule,
